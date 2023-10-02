@@ -456,7 +456,7 @@ class Automata {
         String lastFinalEtat = finalStates.get(finalStates.size()-1);
         System.out.println("lastInitialEtat: "+lastInitialEtat);
         System.out.println("lastFinalEtat: "+lastFinalEtat);
-        // transitions.add(new Transition(lastFinalEtat, "ε", lastInitialEtat));
+        transitions.add(new Transition(lastFinalEtat, "ε\", constraint=\"false", lastInitialEtat));
       } else {
         System.out.println("===> negliger?: "+tree.rootToString());
       }
