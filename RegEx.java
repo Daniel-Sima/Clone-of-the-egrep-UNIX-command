@@ -2,6 +2,7 @@ import java.util.Scanner;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -73,6 +74,7 @@ public class RegEx {
 
         Automata res = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         res = res.toNDFA(ret);
+        res = res.toDFA(res);
         
         writer = new FileWriter("automate.dot");
 			  writer.write("digraph {\nrankdir=LR;\n");
@@ -462,6 +464,29 @@ class Automata {
       }
     }  
     return resAutomata;
+  }
+
+  public Automata toDFA(Automata auto) {
+    ArrayList<String> qTable = new ArrayList<String>();
+    ArrayList<String> symbolTable = new ArrayList<String>();
+    ArrayList<String> transTable = new ArrayList<String>();
+    
+    HashMap<String, String> matrix = new HashMap<String, String>();
+    qTable.addAll(auto.getInitialStates());
+    qTable.addAll(auto.getFinalStates());
+
+    for (Transition t : auto.transitions) {
+      if(!(qTable.contains(t.startState))){
+        qTable.add(t.startState);
+      }
+      if(!(symbolTable.contains(t.transitionSymbol))){
+        transTable.add(t.transitionSymbol+"->"+t.endState);
+      }
+    }
+    System.out.println(qTable);
+    System.out.println(symbolTable);
+    
+    return auto;
   }
 
   public ArrayList<String> getInitialStates(){
