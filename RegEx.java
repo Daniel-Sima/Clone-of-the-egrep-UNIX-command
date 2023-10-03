@@ -8,6 +8,7 @@ import java.util.Map;
 
 import java.io.*; 
 import java.lang.*;
+import java.lang.reflect.Array;
 public class RegEx {
   //MACROS
   static final int CONCAT = 0xC04CA7;
@@ -366,6 +367,34 @@ class Automata {
     }
   }
 
+  class TransitionD {
+    private ArrayList<String> startState;
+    private String transitionSymbol;    
+    private ArrayList<String> endState;
+
+    public TransitionD(ArrayList<String> startState, String transitionSymbol, ArrayList<String> endState) {
+      this.startState = startState;
+      this.transitionSymbol = transitionSymbol;
+      this.endState = endState;
+    }
+
+    public ArrayList<String> getStartState(){
+      return this.startState;
+    }
+
+    public String getTransitionSymbol(){
+      return this.transitionSymbol;
+    }
+
+    public ArrayList<String> getEndState(){
+      return this.endState;
+    }
+
+    public String toString(){
+      return "[" + getStartState() + " -- " + getTransitionSymbol() +" -- >" + getEndState() + "]";
+    }
+  }
+  
   protected ArrayList<String> initialStates; // AR
   protected ArrayList<String> finalStates;
   protected ArrayList<Transition> transitions;  
@@ -466,12 +495,28 @@ class Automata {
     return resAutomata;
   }
 
+  public Automata toDFAbis(Automata auto){
+    ArrayList<String> dfaInit = auto.initialStates;
+    ArrayList<TransitionD> dfaT = new ArrayList<TransitionD>();
+
+    ArrayList<String> tmp = new ArrayList<String>();
+    for (String initS : dfaInit) {
+      for (Transition t : auto.transitions) {
+        if(t.startState.equals(initS)){
+          if(!tmp.contains(t.endState)) tmp.add(t.endState);
+        }
+      }
+    }
+    
+    return auto;
+  }
+
   public Automata toDFA(Automata auto) {
     ArrayList<String> qTable = new ArrayList<String>();
-    ArrayList<String> symbolTable = new ArrayList<String>();
-    ArrayList<String> transTable = new ArrayList<String>();
+    ArrayList<String> sTable = new ArrayList<String>();
     
-    HashMap<String, String> matrix = new HashMap<String, String>();
+    Map<String, Map<String, ArrayList<String>>> table1 = new HashMap<>();
+    Map<ArrayList<String>, Map<String, ArrayList<String>>> table2 = new HashMap<>();
     qTable.addAll(auto.getInitialStates());
     qTable.addAll(auto.getFinalStates());
 
@@ -479,20 +524,86 @@ class Automata {
       if(!(qTable.contains(t.startState))){
         qTable.add(t.startState);
       }
-      if(!(symbolTable.contains(t.transitionSymbol))){
-        transTable.add(t.transitionSymbol+"->"+t.endState);
+      if(!(sTable.contains(t.transitionSymbol))){
+        if(t.transitionSymbol.equals("ε\", constraint=\"false")) sTable.add("ε");
+        else sTable.add(t.transitionSymbol);
       }
     }
     System.out.println(qTable);
-    System.out.println(symbolTable);
-    
+    System.out.println(sTable);
+    for (String q : qTable) {
+      Map<String, ArrayList<String>> qt = new HashMap<String, ArrayList<String>>();
+      for (String s : sTable) {
+        qt.put(s, new ArrayList<String>());
+      }
+      table1.put(q, qt);
+    }
+    for (Transition t : auto.transitions) { 
+      Map<String, ArrayList<String>> qt = table1.get(t.startState);
+      String symbol = t.transitionSymbol;
+      if(t.transitionSymbol.equals("ε\", constraint=\"false")) symbol = "ε";
+      for (String s : qt.keySet()) {
+        if(s.equals(symbol)){
+          if(!qt.get(s).contains(t.endState)){
+            ArrayList<String> list = qt.get(s);
+            list.add(t.endState);
+            qt.put(symbol, list);
+          }
+        }
+      }
+      table1.put(t.startState, qt);
+    }
+    System.out.println("table :");
+    for (String q : table1.keySet()) {
+      System.out.println(q+" : "+table1.get(q));
+    }
+    Map<String, ArrayList<String>> map = new HashMap<String, ArrayList<String>>();
+    for (String s : sTable) {
+      ArrayList<String> list = new ArrayList<String>();
+      for (String q : auto.initialStates) {
+        Map<String, ArrayList<String>> qt = table1.get(q);
+        list.addAll(qt.get(s));
+      }
+      map.put(s, list);
+    }
+    table2.put(auto.initialStates, map);
+    System.out.println(table2);
+    //table2 = process(table2, auto.initialStates);
+
     return auto;
   }
 
+  private Map<ArrayList<String>, Map<String, ArrayList<String>>> process(Map<ArrayList<String>, Map<String, ArrayList<String>>> table, ArrayList<String> q){
+    Map<ArrayList<String>, Map<String, ArrayList<String>>> tmp = new HashMap<ArrayList<String>, Map<String, ArrayList<String>>>();
+    int done = 0;
+    
+    while(done >= 0){
+      Map<String, ArrayList<String>> qt = table.get(q);
+      for (String symbol : qt.keySet()) {
+        if(!(qt.get(symbol).isEmpty())){
+          if(!tmp.containsKey(qt.get(symbol))){
+            tmp.put(qt.get(symbol), new HashMap<String, ArrayList<String>>());
+            done +=1;
+          }
+        }
+      }
+      done--;
+    }
+    
+    
+    return table;
+  }
+
+  public void setInitialStates(ArrayList<String> initS){
+    this.initialStates = initS;
+  }
+  public void setFinalStates(ArrayList<String> finalS){
+    this.finalStates = finalS;
+  }
+  
   public ArrayList<String> getInitialStates(){
     return this.initialStates;
   }
-
   public ArrayList<String> getFinalStates(){
     return this.finalStates;
   }

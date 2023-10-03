@@ -1,18 +1,9 @@
 digraph {
 rankdir=LR;
-	11 [shape=doublecircle]
+	3 [shape=doublecircle]
 
-	0->1 [label= "S"];
-	2->3 [label= "a"];
-	4->5 [label= "b"];
-	6->2 [label= "ε"];
-	6->4 [label= "ε"];
-	3->7 [label= "ε"];
-	5->7 [label= "ε"];
-	7->6 [label= "ε", constraint="false"];
-	1->6 [label= "ε"];
-	8->9 [label= "o"];
-	7->8 [label= "ε"];
-	10->11 [label= "n"];
-	9->10 [label= "ε"];
+	0->1 [label= "a"];
+	2->3 [label= "b"];
+	3->2 [label= "ε", constraint="false"];
+	1->2 [label= "ε"];
 }
