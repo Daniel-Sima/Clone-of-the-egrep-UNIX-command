@@ -1,0 +1,39 @@
+digraph {
+	rankdir=LR;
+
+	29 [shape=doublecircle]
+
+	0->1 [label= "S"];
+	2->3 [label= "a"];
+	4->5 [label= "g"];
+	6->2 [label= "ε"];
+	6->4 [label= "ε"];
+	3->7 [label= "ε"];
+	5->7 [label= "ε"];
+	8->9 [label= "r"];
+	10->6 [label= "ε"];
+	10->8 [label= "ε"];
+	7->11 [label= "ε"];
+	9->11 [label= "ε"];
+	1->10 [label= "ε"];
+	12->13 [label= "S"];
+	11->12 [label= "ε"];
+	14->15 [label= "a"];
+	16->17 [label= "g"];
+	18->14 [label= "ε"];
+	18->16 [label= "ε"];
+	15->19 [label= "ε"];
+	17->19 [label= "ε"];
+	20->21 [label= "r"];
+	22->18 [label= "ε"];
+	22->20 [label= "ε"];
+	19->23 [label= "ε"];
+	21->23 [label= "ε"];
+	13->22 [label= "ε"];
+	24->25 [label= "o"];
+	23->24 [label= "ε"];
+	26->27 [label= "l"];
+	25->26 [label= "ε"];
+	28->29 [label= "s"];
+	27->28 [label= "ε"];
+}

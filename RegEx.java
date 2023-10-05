@@ -1,14 +1,13 @@
 import java.util.Scanner;
 
+import javax.print.DocFlavor.STRING;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import java.io.*; 
 import java.lang.*;
-import java.lang.reflect.Array;
 public class RegEx {
   //MACROS
   static final int CONCAT = 0xC04CA7;
@@ -50,6 +49,7 @@ public class RegEx {
         RegExTree ret = parse();
         System.out.println("  >> Tree result: "+ret.toString()+".");
 
+        // Print Arbre Syntaxique 
         Automata resSyntaxTree = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()); 
         resSyntaxTree = resSyntaxTree.toSyntaxTree(ret);
 
@@ -70,15 +70,12 @@ public class RegEx {
           e.printStackTrace();
         }
 
-
-
-
+        // Print NDFA
         Automata res = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         res = res.toNDFA(ret);
-        res = res.toDFA(res);
         
-        writer = new FileWriter("automate.dot");
-			  writer.write("digraph {\nrankdir=LR;\n");
+        writer = new FileWriter("NDFA.dot");
+			  writer.write("digraph {\n\trankdir=LR;\n\n");
         for (String s : res.finalStates){
           writer.write("\t" + s + " [shape=doublecircle]\n");
         }
@@ -93,14 +90,44 @@ public class RegEx {
         writer.close();
 
 		    try {
-			    process = Runtime.getRuntime().exec("dot -Tpng automate.dot -o automate.png");
+			    process = Runtime.getRuntime().exec("dot -Tpng NDFA.dot -o NDFA.png");
           process.waitFor();
         } catch (IOException | InterruptedException e) {
           e.printStackTrace();
         }
+
+        // Print DFA
+        Automata resDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        resDFA = resDFA.toDFA(res);
+
+        writer = new FileWriter("DFA.dot");
+			  writer.write("digraph {\n\trankdir=LR;\n\n");
+        for (String s : resDFA.getFinalStates()){
+          writer.write("\t" + s + " [shape=doublecircle]\n");
+        }
+
+        writer.write("\n");
+
+        for (Automata.Transition t : resDFA.transitions){
+          writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
+        }
+        
+			  writer.write("}\n");
+        writer.close();
+
+		    try {
+			    process = Runtime.getRuntime().exec("dot -Tpng DFA.dot -o DFA.png");
+          process.waitFor();
+        } catch (IOException | InterruptedException e) {
+          e.printStackTrace();
+        }
+
+
       } catch (Exception e) {
-        System.err.println("  >> ERROR: syntax error for regEx \""+regEx+"\". PONG" );
+        System.err.println("  >> ERROR: syntax error for regEx \""+regEx+"\"." );
       }
+
+      
     }
 
     System.out.println("  >> ...");
@@ -338,6 +365,7 @@ class RegExTree {
 }
 
 
+
 class Automata {
   class Transition {
     private String startState;
@@ -367,34 +395,35 @@ class Automata {
     }
   }
 
-  class TransitionD {
-    private ArrayList<String> startState;
-    private String transitionSymbol;    
-    private ArrayList<String> endState;
+  /**
+   * Classe permettant de retourner deux valeurs de type different
+   */
+  class Pair<K, V> {
+    private K key;
+    private V value;
 
-    public TransitionD(ArrayList<String> startState, String transitionSymbol, ArrayList<String> endState) {
-      this.startState = startState;
-      this.transitionSymbol = transitionSymbol;
-      this.endState = endState;
+    public Pair(K key, V value){
+      this.key = key;
+      this.value = value;
     }
 
-    public ArrayList<String> getStartState(){
-      return this.startState;
+    public K getKey(){
+      return key;
     }
 
-    public String getTransitionSymbol(){
-      return this.transitionSymbol;
+     public V getValue(){
+      return value;
     }
 
-    public ArrayList<String> getEndState(){
-      return this.endState;
+    public void setKey(K key){
+      this.key = key;
     }
 
-    public String toString(){
-      return "[" + getStartState() + " -- " + getTransitionSymbol() +" -- >" + getEndState() + "]";
+    public void setValue(V value){
+      this.value = value;
     }
   }
-  
+
   protected ArrayList<String> initialStates; // AR
   protected ArrayList<String> finalStates;
   protected ArrayList<Transition> transitions;  
@@ -410,7 +439,7 @@ class Automata {
    /** RegExTree to dot */
   public Automata toSyntaxTree(RegExTree tree){
     if (tree.subTrees.isEmpty()){
-      transitions.add(new Transition(initialStates.get(initialStates.size()-1), null, tree.rootToString()+"__"+(numberStates++)));
+      transitions.add(new Transition(initialStates.get(initialStates.size()-1), null, ("\""+tree.rootToString()+"__"+(numberStates++))+"\""));
       return new Automata(initialStates, finalStates, transitions);
     } 
 
@@ -495,120 +524,176 @@ class Automata {
     return resAutomata;
   }
 
-  public Automata toDFAbis(Automata auto){
-    ArrayList<String> dfaInit = auto.initialStates;
-    ArrayList<TransitionD> dfaT = new ArrayList<TransitionD>();
-
-    ArrayList<String> tmp = new ArrayList<String>();
-    for (String initS : dfaInit) {
-      for (Transition t : auto.transitions) {
-        if(t.startState.equals(initS)){
-          if(!tmp.contains(t.endState)) tmp.add(t.endState);
+  /**
+   * Getting epsilon close inital states
+   * 
+   * @return ArrayList with initals states
+   */
+  private ArrayList<String> getInitalEpsilonStates(ArrayList<String> startStates){
+    ArrayList<String> res = new ArrayList<>();
+    res.addAll(startStates);
+    
+    for (String s : startStates){
+      for (Transition e : this.getTransitions()){
+        if ((e.getStartState().equals(s)) && (e.getTransitionSymbol().equals("ε")) && !(res.contains(e.getEndState()))){
+          res.add(e.getEndState());
         }
       }
     }
+
+    if (res.size() != startStates.size()){
+      res = this.getInitalEpsilonStates(res);
+    }
     
-    return auto;
+    return res;
   }
 
-  public Automata toDFA(Automata auto) {
-    ArrayList<String> qTable = new ArrayList<String>();
-    ArrayList<String> sTable = new ArrayList<String>();
-    
-    Map<String, Map<String, ArrayList<String>>> table1 = new HashMap<>();
-    Map<ArrayList<String>, Map<String, ArrayList<String>>> table2 = new HashMap<>();
-    qTable.addAll(auto.getInitialStates());
-    qTable.addAll(auto.getFinalStates());
+  /**
+   * Testing all 256 ASCII carcacters to find stats that are acceptable
+   * 
+   * @return Map with ASCI caracter and state number
+   */
+  private HashMap<String, ArrayList<String>> getASCII_transitions(ArrayList<String> states){
+    HashMap<String, ArrayList<String>> res = new HashMap<>();
 
-    for (Transition t : auto.transitions) {
-      if(!(qTable.contains(t.startState))){
-        qTable.add(t.startState);
-      }
-      if(!(sTable.contains(t.transitionSymbol))){
-        if(t.transitionSymbol.equals("ε\", constraint=\"false")) sTable.add("ε");
-        else sTable.add(t.transitionSymbol);
-      }
-    }
-    System.out.println(qTable);
-    System.out.println(sTable);
-    for (String q : qTable) {
-      Map<String, ArrayList<String>> qt = new HashMap<String, ArrayList<String>>();
-      for (String s : sTable) {
-        qt.put(s, new ArrayList<String>());
-      }
-      table1.put(q, qt);
-    }
-    for (Transition t : auto.transitions) { 
-      Map<String, ArrayList<String>> qt = table1.get(t.startState);
-      String symbol = t.transitionSymbol;
-      if(t.transitionSymbol.equals("ε\", constraint=\"false")) symbol = "ε";
-      for (String s : qt.keySet()) {
-        if(s.equals(symbol)){
-          if(!qt.get(s).contains(t.endState)){
-            ArrayList<String> list = qt.get(s);
-            list.add(t.endState);
-            qt.put(symbol, list);
+    for (int i = 0; i <= 255; i++) {
+      char caractere = (char) i;
+      for (Transition e : this.transitions){
+        for (String s : states){
+          if (e.getStartState().equals(s)){ // ATTENTION .equals important
+            if ((""+caractere).equals(e.getTransitionSymbol())) {
+              ArrayList<String> etatsASCII = new ArrayList<>();
+              etatsASCII.add(e.getEndState());
+              etatsASCII = this.getInitalEpsilonStates(etatsASCII);
+              res.put(""+caractere, etatsASCII);
+            }
           }
         }
       }
-      table1.put(t.startState, qt);
     }
-    System.out.println("table :");
-    for (String q : table1.keySet()) {
-      System.out.println(q+" : "+table1.get(q));
-    }
-    Map<String, ArrayList<String>> map = new HashMap<String, ArrayList<String>>();
-    for (String s : sTable) {
-      ArrayList<String> list = new ArrayList<String>();
-      for (String q : auto.initialStates) {
-        Map<String, ArrayList<String>> qt = table1.get(q);
-        list.addAll(qt.get(s));
-      }
-      map.put(s, list);
-    }
-    table2.put(auto.initialStates, map);
-    System.out.println(table2);
-    //table2 = process(table2, auto.initialStates);
 
-    return auto;
+    return res;
   }
 
-  private Map<ArrayList<String>, Map<String, ArrayList<String>>> process(Map<ArrayList<String>, Map<String, ArrayList<String>>> table, ArrayList<String> q){
-    Map<ArrayList<String>, Map<String, ArrayList<String>>> tmp = new HashMap<ArrayList<String>, Map<String, ArrayList<String>>>();
-    int done = 0;
+  private  Pair<ArrayList<HashMap<String, ArrayList<String>>>, ArrayList<ArrayList<String>>>  findStates_DFA(ArrayList<ArrayList<String>> states, ArrayList<HashMap<String, ArrayList<String>>> tab, int cpt){
+    ArrayList<HashMap<String, ArrayList<String>>> tableau = new ArrayList<>(tab);
+    ArrayList<ArrayList<String>> newStates = new ArrayList<>(states);
+
+    HashMap<String, ArrayList<String>> res = new HashMap<>();
     
-    while(done >= 0){
-      Map<String, ArrayList<String>> qt = table.get(q);
-      for (String symbol : qt.keySet()) {
-        if(!(qt.get(symbol).isEmpty())){
-          if(!tmp.containsKey(qt.get(symbol))){
-            tmp.put(qt.get(symbol), new HashMap<String, ArrayList<String>>());
-            done +=1;
+    for (int i=0; i < states.size(); i++){
+      if (i >= cpt){
+        res = this.getASCII_transitions(states.get(i));
+        System.out.println("--> Pour: "+states.get(i)+" res: "+res);
+        if ((!tableau.contains(res)) && (!newStates.contains(res.values()))){
+          tableau.add(res);
+          newStates.addAll(res.values());
+        } else {
+          tableau.add(res);
+        }
+      }
+    }
+
+    System.out.println("--> New states: "+newStates);
+    System.out.println("--> Tableau: "+tableau);
+
+    if (states.size() != newStates.size()){
+      System.err.println("\n");
+      return this.findStates_DFA(newStates, tableau, states.size());
+    } 
+    
+    Pair<ArrayList<HashMap<String, ArrayList<String>>>, ArrayList<ArrayList<String>>> resultat =  new Pair<>(tableau, newStates);
+    return resultat;
+  }
+
+  /**
+   * From NDFA to DFA
+   * 
+   * @param NDFA
+   * @return
+   */
+  public Automata toDFA(Automata NDFA) {
+    System.out.println("Inital state: "+NDFA.getInitialStates());    
+    System.out.println("Final states: "+NDFA.getFinalStates());
+    NDFA.printTransitions();
+    /*----------------------------------------------- */
+    System.out.println("-----------------------------------------------");
+    ArrayList<String> startState = new ArrayList<>(NDFA.getInitialStates());
+    startState = NDFA.getInitalEpsilonStates(startState);
+    ArrayList<ArrayList<String>> states = new ArrayList<>();
+    states.add(startState);
+
+    System.out.println("===> states: "+states);
+    System.out.println("==> startState: "+startState);
+    
+    // HashMap<String, ArrayList<String>> res = NDFA.getASCII_transitions(states.get(0));
+    // System.out.println("===> res: "+res);
+    // // Tableau final de l'automate
+    ArrayList<HashMap<String, ArrayList<String>>> tableau = new ArrayList<>();
+    // tableau.add(res);
+    Pair<ArrayList<HashMap<String, ArrayList<String>>>, ArrayList<ArrayList<String>>> pairTableauStates = NDFA.findStates_DFA(states, tableau, 0);
+    System.out.println("\nFinal tableau: "+pairTableauStates.getKey());
+    System.out.println("Final states: "+pairTableauStates.getValue());
+    System.out.println("-----------------------------------------------");
+
+    Automata automataDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    automataDFA.addInitialState("0");
+    for (int i=0; i<pairTableauStates.getValue().size(); i++) {
+      HashMap<String, ArrayList<String>> tabTransitions = pairTableauStates.getKey().get(i);
+      
+      // Parcours simultane de cle valeur par ensemble
+      for (Map.Entry<String, ArrayList<String>> entry : tabTransitions.entrySet()) {
+        automataDFA.addTransition(new Transition(""+i, entry.getKey(), ""+pairTableauStates.getValue().indexOf(entry.getValue())));
+        
+        // Ajout des etats finaux si on en trouve dans le 'tableau'
+        if (entry.getValue().contains(NDFA.getFinalStates().get(0))) { // AR
+          if (!automataDFA.getFinalStates().contains(""+pairTableauStates.getValue().indexOf(entry.getValue()))){
+            automataDFA.addFinalState(""+pairTableauStates.getValue().indexOf(entry.getValue()));
           }
         }
       }
-      done--;
     }
-    
-    
-    return table;
+    System.out.print("Final DFA: ");
+    automataDFA.printTransitions();
+    System.out.println("-----------------------------------------------");
+
+    return automataDFA;
   }
 
-  public void setInitialStates(ArrayList<String> initS){
-    this.initialStates = initS;
-  }
-  public void setFinalStates(ArrayList<String> finalS){
-    this.finalStates = finalS;
-  }
-  
   public ArrayList<String> getInitialStates(){
     return this.initialStates;
   }
+
   public ArrayList<String> getFinalStates(){
     return this.finalStates;
   }
 
+  public ArrayList<Transition> getTransitions(){
+    return this.transitions;
+  }
+
+  public void addInitialState(String initial){
+    this.initialStates.add(initial); // ArrayList but only one into
+  }
+
+  public void addFinalState(String finalS){
+    this.finalStates.add(finalS);
+  }
+
+  public void addFinalStates(ArrayList<String> listFinalS){
+    this.finalStates.addAll(listFinalS);
+  }
+
+  public void addTransition(Transition e){
+    this.transitions.add(e);
+  }
+
+  public void addTransitions(ArrayList<Transition> listE) {
+    this.transitions.addAll(listE);
+  }
+
   public void printTransitions(){
+    System.out.println("Transitions: ");
     for (Transition e : this.transitions){
       System.out.println(e.toString());
     }
