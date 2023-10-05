@@ -79,6 +79,10 @@ public class RegEx {
         for (String s : res.finalStates){
           writer.write("\t" + s + " [shape=doublecircle]\n");
         }
+        for (String s : res.initialStates){
+          writer.write("\t" + s + "[style=filled, fillcolor=\"lightblue\"]\n");
+        }
+
 
         writer.write("\n");
 
@@ -104,6 +108,9 @@ public class RegEx {
 			  writer.write("digraph {\n\trankdir=LR;\n\n");
         for (String s : resDFA.getFinalStates()){
           writer.write("\t" + s + " [shape=doublecircle]\n");
+        }
+        for (String s : resDFA.initialStates){
+          writer.write("\t" + s + "[style=filled, fillcolor=\"lightblue\"]\n");
         }
 
         writer.write("\n");
@@ -463,6 +470,36 @@ class Automata {
     return resAutomata;
   }
 
+   /**
+    * Trouve toute les transitions entre un etat de depart (present dans 'statesToSearch') et de fin.
+    * Change leur numeros.
+    * A REVOIR CAS PARTICULIERS
+    *
+    * @param startState
+    * @param accTransitions
+    * @param statesToSearch
+    * @return
+    */
+  public ArrayList<Transition> findTransitionsBetweenStates(ArrayList<Transition> accTransitions, ArrayList<String> statesToSearch){
+    ArrayList<String> newStatesToSearch = new ArrayList<>();
+    for (String etat : statesToSearch){
+      for (Transition e : transitions){
+        if (e.getStartState().equals(etat)){
+          accTransitions.add(new Transition(e.getStartState()+e.getStartState(), e.getTransitionSymbol(), e.getEndState()+e.getEndState()));
+          if (!newStatesToSearch.contains(e.getEndState())){
+            newStatesToSearch.add(e.getEndState());
+          }
+        }
+      }
+    }
+
+    if (!newStatesToSearch.isEmpty()){
+      return findTransitionsBetweenStates(accTransitions, newStatesToSearch);
+    }
+
+    return accTransitions;
+  }
+
    /** From tree to automata (NFDA) */
   public Automata toNDFA(RegExTree tree) {
     if (tree.subTrees.isEmpty()) {
@@ -510,13 +547,39 @@ class Automata {
         transitions.add(new Transition(lastFinalEtatR2, "ε", finalStates.get(initialStates.size()-1)));
         numberStates += 2;
       } else if ((tree.rootToString() == "+")) {
-        System.out.println("====> Initial states: "+initialStates);
-        System.out.println("====> Final states: "+finalStates);
+        System.err.println("/////////////////////////////////////////////////////");
+        printTransitions();
         String lastInitialEtat = initialStates.get(initialStates.size()-1);
         String lastFinalEtat = finalStates.get(finalStates.size()-1);
         System.out.println("lastInitialEtat: "+lastInitialEtat);
         System.out.println("lastFinalEtat: "+lastFinalEtat);
-        transitions.add(new Transition(lastFinalEtat, "ε\", constraint=\"false", lastInitialEtat));
+
+        ArrayList<Transition> plusTransitons = new ArrayList<>();
+        ArrayList<String> statesToSearch = new ArrayList<>(); 
+        statesToSearch.add(lastInitialEtat);
+        plusTransitons = findTransitionsBetweenStates(plusTransitons, statesToSearch);
+
+        
+        transitions.addAll(plusTransitons);
+        String newInitialEtat = plusTransitons.get(0).getStartState();
+        String newFinalEtat = plusTransitons.get(plusTransitons.size()-1).getEndState();
+
+        transitions.add(new Transition(lastFinalEtat, "ε", newInitialEtat));
+        transitions.add(new Transition(newFinalEtat, "ε", newInitialEtat));
+
+        // Etat ultime de l'automate avec PLUS
+        String newFinalFinalEtat = ""+numberStates; numberStates++;
+        System.out.println("====> ce: "+newFinalFinalEtat);
+        finalStates.remove(finalStates.size()-1);
+        finalStates.add(newFinalFinalEtat);
+        transitions.add(new Transition(lastFinalEtat, "ε", newFinalFinalEtat));
+        transitions.add(new Transition(newFinalEtat, "ε", newFinalFinalEtat));
+
+
+
+        System.out.println("--------> finalStates: "+finalStates);
+        System.out.println("--------> initialStates: "+initialStates);
+        System.err.println("/////////////////////////////////////////////////////");
       } else {
         System.out.println("===> negliger?: "+tree.rootToString());
       }
@@ -585,7 +648,7 @@ class Automata {
       if (i >= cpt){
         res = this.getASCII_transitions(states.get(i));
         System.out.println("--> Pour: "+states.get(i)+" res: "+res);
-        if ((!tableau.contains(res)) && (!newStates.contains(res.values()))){
+        if ((!tableau.contains(res)) && (!newStates.containsAll(res.values()))){
           tableau.add(res);
           newStates.addAll(res.values());
         } else {
