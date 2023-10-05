@@ -4,7 +4,12 @@ import javax.print.DocFlavor.STRING;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 import java.io.*; 
 import java.lang.*;
@@ -80,7 +85,7 @@ public class RegEx {
           writer.write("\t" + s + " [shape=doublecircle]\n");
         }
         for (String s : res.initialStates){
-          writer.write("\t" + s + "[style=filled, fillcolor=\"lightblue\"]\n");
+          writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
         }
 
 
@@ -110,7 +115,7 @@ public class RegEx {
           writer.write("\t" + s + " [shape=doublecircle]\n");
         }
         for (String s : resDFA.initialStates){
-          writer.write("\t" + s + "[style=filled, fillcolor=\"lightblue\"]\n");
+          writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
         }
 
         writer.write("\n");
@@ -129,6 +134,36 @@ public class RegEx {
           e.printStackTrace();
         }
 
+
+        // Print Min-DFA
+        System.out.println("/*********************************** Min-DFA ***********************************/");
+        Automata resMDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        resMDFA = resMDFA.toMinDFA(resDFA);
+
+        writer = new FileWriter("Min-DFA.dot");
+			  writer.write("digraph {\n\trankdir=LR;\n\n");
+        for (String s : resMDFA.getFinalStates()){
+          writer.write("\t" + s + " [shape=doublecircle]\n");
+        }
+        for (String s : resMDFA.initialStates){
+          writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
+        }
+        
+        writer.write("\n");
+
+        for (Automata.Transition t : resMDFA.transitions){
+          writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
+        }
+        
+			  writer.write("}\n");
+        writer.close();
+
+		    try {
+			    process = Runtime.getRuntime().exec("dot -Tpng Min-DFA.dot -o Min-DFA.png");
+          process.waitFor();
+        } catch (IOException | InterruptedException e) {
+          e.printStackTrace();
+        }
 
       } catch (Exception e) {
         System.err.println("  >> ERROR: syntax error for regEx \""+regEx+"\"." );
@@ -399,6 +434,17 @@ class Automata {
 
     public String toString(){
       return "[" + getStartState() + " -- " + getTransitionSymbol() +" -- >" + getEndState() + "]";
+    }
+
+    /** Pour verifier les doublons selon notre implementation */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Transition nouvelle = (Transition) o;
+        return Objects.equals(startState, nouvelle.getStartState()) &&
+               Objects.equals(endState, nouvelle.getEndState()) &&
+               Objects.equals(transitionSymbol, nouvelle.getTransitionSymbol());
     }
   }
 
@@ -721,6 +767,186 @@ class Automata {
     System.out.println("-----------------------------------------------");
 
     return automataDFA;
+  }
+
+
+  /**
+   * Decoupe l'ensemble des etats jusqu'a ce que on ne peut plus decouper
+   * parcequ'il y en a qu'un seul ou parceque les deux sont dans le 
+   * meme ensemble.
+   * 
+   * @param ensembleTotal
+   * @param tabTransitions
+   * @return
+   */
+  public Set<Set<String>> decoupage(Set<Set<String>> ensembleTotal,  ArrayList<HashMap<String, String>> tabTransitions, String symboles, int i){
+    if (i == symboles.length()){
+      return ensembleTotal;
+    }
+
+    String symbole = ""+symboles.charAt(i); 
+    Set<Set<String>> ensembleTotalBis = new LinkedHashSet<>(ensembleTotal);
+
+    for (Set<String> ens : ensembleTotal){
+      System.out.println("==> ens: "+ens+" i: "+i);
+      if (!(ens.size() == 1)){
+        int cpt = 0;
+        Set<String> dedans = new LinkedHashSet<>();
+        Set<String> pasDedans = new LinkedHashSet<>();
+        for (HashMap<String, String> table : tabTransitions){
+          if (ens.contains(""+cpt)) {
+            if (table.containsKey(symbole)){
+              dedans.add(""+cpt);
+            } else {
+              pasDedans.add(""+cpt);
+            }
+          }
+          cpt++;
+        }
+        ensembleTotalBis.remove(ens);
+        if (!dedans.isEmpty()){
+          ensembleTotalBis.add(dedans);
+        }
+        if (!pasDedans.isEmpty()){
+          ensembleTotalBis.add(pasDedans);
+        }
+        System.out.println("==> dedans: "+dedans);        
+        System.out.println("==> pasDedans: "+pasDedans);
+
+      }
+    }
+
+    System.out.println("==> ensembleTotalBis: "+ensembleTotalBis+" i: "+i+"\n");
+    return decoupage(ensembleTotalBis, tabTransitions, symboles, (i+1));
+  }
+
+  /**
+   * Minimisation de l'automate deterministe DFA.
+   * 
+   * @param DFA
+   * @return
+   */
+  public Automata toMinDFA(Automata DFA){
+    ArrayList<HashMap<String, String>> tabTransitions = new ArrayList<>();
+
+    // Recuperation du tableau des transitions
+    for (Transition e : DFA.getTransitions()){
+      // Si rien n'a ete ajoute encore
+      if (tabTransitions.size() == Integer.parseInt(e.getStartState())){
+        HashMap<String, String> val = new HashMap<>();
+        val.put(e.getTransitionSymbol(), e.getEndState());
+        tabTransitions.add(Integer.parseInt(e.getStartState()), val);
+      } else {
+        tabTransitions.get(Integer.parseInt(e.getStartState())).put(e.getTransitionSymbol(), e.getEndState());
+      }
+    }
+
+    Set<String> ensembleFinaux = new LinkedHashSet<>();
+    for (String finaux : DFA.finalStates){
+      ensembleFinaux.add(finaux);
+    }
+
+    Set<String> ensembleNonFinaux = new LinkedHashSet<>();
+    for (int i=0; i<tabTransitions.size(); i++){
+      if (!ensembleFinaux.contains(""+i)){
+        ensembleNonFinaux.add(""+i);
+      }
+    }
+
+    System.out.println(tabTransitions);
+    System.out.println("--> Set finaux: "+ensembleFinaux);    
+    System.out.println("--> Set non finaux: "+ensembleNonFinaux);
+
+    System.out.println("--> Symboles: "+DFA.getSymbolesTransition());
+    Set<Set<String>> ensembleTotal = new LinkedHashSet<>();
+    ensembleTotal.add(ensembleFinaux); ensembleTotal.add(ensembleNonFinaux);
+    ensembleTotal = decoupage(ensembleTotal, tabTransitions, DFA.getSymbolesTransition(), 0);
+    System.out.println("--> ensembleTotal: "+ensembleTotal);
+    System.out.println("--> Transitions actuelles: "+transitions);
+
+    for (Set<String> ens : ensembleTotal){
+       Iterator<String> it = ens.iterator();
+        while (it.hasNext()) {
+          String indexString = it.next();
+          int indexInt = Integer.parseInt(indexString);
+          if (!(tabTransitions.size() <= indexInt)){
+            for (Map.Entry<String, String> entry : tabTransitions.get(indexInt).entrySet()) {
+              Set<String> endSet = getSetFromSets(ensembleTotal, entry.getValue());
+              if ((ens.size() == 1) && (endSet.size() == 1)){
+                if (!transitions.contains(new Transition(indexString, entry.getKey(), entry.getValue()))){
+                  transitions.add(new Transition(indexString, entry.getKey(), entry.getValue()));
+                }
+              } else if ((ens.size() > 1) && (endSet.size() == 1)) {
+                if (!transitions.contains(new Transition("\""+ens.toString()+"\"", entry.getKey(), entry.getValue()))){
+                  transitions.add(new Transition("\""+ens.toString()+"\"", entry.getKey(), entry.getValue()));
+                }
+              } else if ((ens.size() == 1) && (endSet.size() > 1)) {
+                if (!transitions.contains(new Transition(indexString, entry.getKey(), "\""+endSet.toString()+"\""))){
+                  transitions.add(new Transition(indexString, entry.getKey(), "\""+endSet.toString()+"\""));
+                }
+              } else {
+                if (!transitions.contains(new Transition("\""+ens.toString()+"\"", entry.getKey(), "\""+endSet.toString()+"\""))){
+                  transitions.add(new Transition("\""+ens.toString()+"\"", entry.getKey(), "\""+endSet.toString()+"\""));
+                } 
+              }
+            }
+          }
+        }
+    }
+    System.out.println("--> Transitions nouvelles: "+transitions);
+
+    // Recherche set de l'etat initial
+    for (Set<String> ens : ensembleTotal){
+      if (ens.contains("0")){
+        List<String> liste = new ArrayList<>(ens);
+        initialStates.addAll(liste);
+      }
+    }
+
+    // Recherche sets des etats finaux
+    for (String s : DFA.finalStates){
+      for (Set<String> ens : ensembleTotal){
+        if (ens.contains(s)){
+          List<String> liste = new ArrayList<>(ens);
+          finalStates.addAll(liste);
+        }
+      }
+    }
+
+    return this;
+  }
+
+  /**
+   * 
+   * @param setOfSets
+   * @param val
+   * @return
+   */
+  public Set<String> getSetFromSets(Set<Set<String>> setOfSets, String val){
+    for (Set<String> sets : setOfSets){
+      if (sets.contains(val)){
+        return sets;
+      }
+    }
+
+    return null;
+  }
+
+
+  /**
+   * 
+   * 
+   * @return
+   */
+  public String getSymbolesTransition(){
+    String res = "";
+    for (Transition e : this.getTransitions()){
+      if (!res.contains(e.getTransitionSymbol())){
+        res += e.getTransitionSymbol();
+      }
+    }
+
+    return res;
   }
 
   public ArrayList<String> getInitialStates(){
