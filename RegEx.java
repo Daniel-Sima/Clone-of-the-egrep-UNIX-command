@@ -1,6 +1,7 @@
 import java.util.Scanner;
 
 import javax.print.DocFlavor.STRING;
+import javax.print.DocFlavor.URL;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,8 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import java.io.*; 
-import java.lang.*;
+import java.io.*;
 public class RegEx {
   //MACROS
   static final int CONCAT = 0xC04CA7;
@@ -27,6 +27,8 @@ public class RegEx {
   
   //REGEX
   private static String regEx;
+  //TEXT
+  private static String text;
   
   //CONSTRUCTOR
   public RegEx(){}
@@ -34,7 +36,11 @@ public class RegEx {
   //MAIN
   public static void main(String arg[]) {
     System.out.println("Welcome to Bogota, Mr. Thomas Anderson.");
-    if (arg.length!=0) {
+    System.out.println(arg[0]);
+    if(arg.length==2){
+      regEx = arg[0];
+      text = arg[1];
+    } else if (arg.length==1) {
       regEx = arg[0];
     } else {
       Scanner scanner = new Scanner(System.in);
@@ -136,7 +142,7 @@ public class RegEx {
 
 
         // Print Min-DFA
-        System.out.println("/*********************************** Min-DFA ***********************************/");
+        //System.out.println("/*********************************** Min-DFA ***********************************/");
         Automata resMDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         resMDFA = resMDFA.toMinDFA(resDFA);
 
@@ -157,6 +163,11 @@ public class RegEx {
         
 			  writer.write("}\n");
         writer.close();
+
+        if(arg.length==2){
+          int cptOcc = resMDFA.search(text);
+          System.out.println("We found "+cptOcc+" occurences of pattern.");
+        }
 
 		    try {
 			    process = Runtime.getRuntime().exec("dot -Tpng Min-DFA.dot -o Min-DFA.png");
@@ -358,6 +369,31 @@ public class RegEx {
     return new RegExTree(tree.root, subTrees);
   }
   
+  //read file
+  public static String readFile(String path){
+    StringBuilder sb = new StringBuilder();
+    String strLine = "";
+    String str_data = "";
+    try {
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        while (strLine != null)
+        {
+            if (strLine == null) break;
+            str_data += strLine;
+            strLine = br.readLine();
+            
+        }
+        br.close();
+    } catch (FileNotFoundException e) {
+        System.err.println("File not found");
+    } catch (IOException e) {
+        System.err.println("Unable to read the file.");
+    }
+        
+    return str_data;
+        
+  }
+
   //EXAMPLE
   // --> RegEx from Aho-Ullman book Chap.10 Example 10.25
   private static RegExTree exampleAhoUllman() {
@@ -594,11 +630,11 @@ class Automata {
         numberStates += 2;
       } else if ((tree.rootToString() == "+")) {
         System.err.println("/////////////////////////////////////////////////////");
-        printTransitions();
+        //printTransitions();
         String lastInitialEtat = initialStates.get(initialStates.size()-1);
         String lastFinalEtat = finalStates.get(finalStates.size()-1);
-        System.out.println("lastInitialEtat: "+lastInitialEtat);
-        System.out.println("lastFinalEtat: "+lastFinalEtat);
+        //System.out.println("lastInitialEtat: "+lastInitialEtat);
+        //System.out.println("lastFinalEtat: "+lastFinalEtat);
 
         ArrayList<Transition> plusTransitons = new ArrayList<>();
         ArrayList<String> statesToSearch = new ArrayList<>(); 
@@ -615,7 +651,7 @@ class Automata {
 
         // Etat ultime de l'automate avec PLUS
         String newFinalFinalEtat = ""+numberStates; numberStates++;
-        System.out.println("====> ce: "+newFinalFinalEtat);
+        //System.out.println("====> ce: "+newFinalFinalEtat);
         finalStates.remove(finalStates.size()-1);
         finalStates.add(newFinalFinalEtat);
         transitions.add(new Transition(lastFinalEtat, "ε", newFinalFinalEtat));
@@ -623,9 +659,9 @@ class Automata {
 
 
 
-        System.out.println("--------> finalStates: "+finalStates);
-        System.out.println("--------> initialStates: "+initialStates);
-        System.err.println("/////////////////////////////////////////////////////");
+        //System.out.println("--------> finalStates: "+finalStates);
+        //System.out.println("--------> initialStates: "+initialStates);
+        //System.err.println("/////////////////////////////////////////////////////");
       } else {
         System.out.println("===> negliger?: "+tree.rootToString());
       }
@@ -693,18 +729,16 @@ class Automata {
     for (int i=0; i < states.size(); i++){
       if (i >= cpt){
         res = this.getASCII_transitions(states.get(i));
-        System.out.println("--> Pour: "+states.get(i)+" res: "+res);
+        //System.out.println("--> Pour: "+states.get(i)+" res: "+res);
         if ((!tableau.contains(res)) && (!newStates.containsAll(res.values()))){
-          tableau.add(res);
           newStates.addAll(res.values());
-        } else {
-          tableau.add(res);
         }
+        tableau.add(res);
       }
     }
 
-    System.out.println("--> New states: "+newStates);
-    System.out.println("--> Tableau: "+tableau);
+    //System.out.println("--> New states: "+newStates);
+    //System.out.println("--> Tableau: "+tableau);
 
     if (states.size() != newStates.size()){
       System.err.println("\n");
@@ -722,18 +756,18 @@ class Automata {
    * @return
    */
   public Automata toDFA(Automata NDFA) {
-    System.out.println("Inital state: "+NDFA.getInitialStates());    
-    System.out.println("Final states: "+NDFA.getFinalStates());
-    NDFA.printTransitions();
+    //System.out.println("Inital state: "+NDFA.getInitialStates());    
+    //System.out.println("Final states: "+NDFA.getFinalStates());
+    //NDFA.printTransitions();
     /*----------------------------------------------- */
-    System.out.println("-----------------------------------------------");
+    //System.out.println("-----------------------------------------------");
     ArrayList<String> startState = new ArrayList<>(NDFA.getInitialStates());
     startState = NDFA.getInitalEpsilonStates(startState);
     ArrayList<ArrayList<String>> states = new ArrayList<>();
     states.add(startState);
 
-    System.out.println("===> states: "+states);
-    System.out.println("==> startState: "+startState);
+    //System.out.println("===> states: "+states);
+    //System.out.println("==> startState: "+startState);
     
     // HashMap<String, ArrayList<String>> res = NDFA.getASCII_transitions(states.get(0));
     // System.out.println("===> res: "+res);
@@ -741,9 +775,9 @@ class Automata {
     ArrayList<HashMap<String, ArrayList<String>>> tableau = new ArrayList<>();
     // tableau.add(res);
     Pair<ArrayList<HashMap<String, ArrayList<String>>>, ArrayList<ArrayList<String>>> pairTableauStates = NDFA.findStates_DFA(states, tableau, 0);
-    System.out.println("\nFinal tableau: "+pairTableauStates.getKey());
-    System.out.println("Final states: "+pairTableauStates.getValue());
-    System.out.println("-----------------------------------------------");
+    //System.out.println("\nFinal tableau: "+pairTableauStates.getKey());
+    //System.out.println("Final states: "+pairTableauStates.getValue());
+    //System.out.println("-----------------------------------------------");
 
     Automata automataDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     automataDFA.addInitialState("0");
@@ -762,10 +796,11 @@ class Automata {
         }
       }
     }
+    /*
     System.out.print("Final DFA: ");
     automataDFA.printTransitions();
     System.out.println("-----------------------------------------------");
-
+    */
     return automataDFA;
   }
 
@@ -788,7 +823,7 @@ class Automata {
     Set<Set<String>> ensembleTotalBis = new LinkedHashSet<>(ensembleTotal);
 
     for (Set<String> ens : ensembleTotal){
-      System.out.println("==> ens: "+ens+" i: "+i);
+      //System.out.println("==> ens: "+ens+" i: "+i);
       if (!(ens.size() == 1)){
         int cpt = 0;
         Set<String> dedans = new LinkedHashSet<>();
@@ -810,13 +845,13 @@ class Automata {
         if (!pasDedans.isEmpty()){
           ensembleTotalBis.add(pasDedans);
         }
-        System.out.println("==> dedans: "+dedans);        
-        System.out.println("==> pasDedans: "+pasDedans);
+        //System.out.println("==> dedans: "+dedans);        
+        //System.out.println("==> pasDedans: "+pasDedans);
 
       }
     }
 
-    System.out.println("==> ensembleTotalBis: "+ensembleTotalBis+" i: "+i+"\n");
+    //System.out.println("==> ensembleTotalBis: "+ensembleTotalBis+" i: "+i+"\n");
     return decoupage(ensembleTotalBis, tabTransitions, symboles, (i+1));
   }
 
@@ -852,18 +887,19 @@ class Automata {
         ensembleNonFinaux.add(""+i);
       }
     }
-
+    /* 
     System.out.println(tabTransitions);
     System.out.println("--> Set finaux: "+ensembleFinaux);    
     System.out.println("--> Set non finaux: "+ensembleNonFinaux);
-
     System.out.println("--> Symboles: "+DFA.getSymbolesTransition());
+    */
     Set<Set<String>> ensembleTotal = new LinkedHashSet<>();
     ensembleTotal.add(ensembleFinaux); ensembleTotal.add(ensembleNonFinaux);
     ensembleTotal = decoupage(ensembleTotal, tabTransitions, DFA.getSymbolesTransition(), 0);
+    /*
     System.out.println("--> ensembleTotal: "+ensembleTotal);
     System.out.println("--> Transitions actuelles: "+transitions);
-
+    */
     for (Set<String> ens : ensembleTotal){
        Iterator<String> it = ens.iterator();
         while (it.hasNext()) {
@@ -893,7 +929,8 @@ class Automata {
           }
         }
     }
-    System.out.println("--> Transitions nouvelles: "+transitions);
+
+    //System.out.println("--> Transitions nouvelles: "+transitions);
 
     // Recherche set de l'etat initial
     for (Set<String> ens : ensembleTotal){
@@ -930,6 +967,79 @@ class Automata {
     }
 
     return null;
+  }
+
+  /**
+   * 
+   * @param path
+   * @return
+   */
+  public int search(String path){
+    File directory = new File(path);
+    StringBuilder sb = new StringBuilder();
+    String strLine = "";
+    String str_data = "";
+    int cpt=0;
+    System.out.println("Reading: "+directory.getAbsolutePath());
+    try {
+        BufferedReader br = new BufferedReader(new FileReader(directory.getAbsolutePath()));
+        
+        str_data += strLine;
+        while ((strLine = br.readLine()) != null)
+        {
+          for (String init : this.initialStates) {
+            if(processAuto(init, strLine, false)){
+              cpt++;
+              System.out.println(strLine);
+            }
+          }
+          str_data += strLine;
+        }
+        br.close();
+    } catch (FileNotFoundException e) {
+        System.err.println("File not found");
+    } catch (IOException e) {
+        System.err.println("Unable to read the file.");
+    }
+    return cpt;
+  }
+
+  protected boolean processAuto(String state, String strLine, boolean follow){
+    if(state.contains("[")){
+      for (int i=0; i<state.length(); i++) {
+        if(this.finalStates.contains(""+state.charAt(i))){
+          //System.out.println(state+" "+strLine);
+          return true;
+        }
+      }
+    } else if(this.finalStates.contains(state)){
+      //System.out.println(state+" "+strLine);
+      return true;
+    }
+    if(strLine.isEmpty()) return false;
+    ArrayList<Transition> currTransitions = new ArrayList<>();
+    
+    for (Transition t : this.transitions) {
+      if(t.startState.equals(state)) currTransitions.add(t);
+    }
+    for(Transition t : currTransitions){
+      if(follow){
+        //System.out.println();
+        //System.out.println(currTransitions+"\n"+strLine);
+        if(t.transitionSymbol.equals(""+strLine.charAt(0))){
+          return processAuto(t.endState, strLine.substring(1,strLine.length()), true);
+        }
+      }else{
+        for(int i=0; i<strLine.length(); i++){
+          if(t.transitionSymbol.equals(""+strLine.charAt(i))){
+            //System.out.println(strLine.substring(i+1,strLine.length()));
+            return processAuto(t.endState, strLine.substring(i+1,strLine.length()), true);
+          }
+        }
+      }
+      
+    }
+    return false;
   }
 
 
