@@ -33,10 +33,17 @@ public class RegEx {
   //CONSTRUCTOR
   public RegEx(){}
 
+  //TIME
+  private static long startDFA,startDOT,startMDFA,startNFDA,startWT;
+  private static long endDFA,endDOT,endMDFA,endNFDA,endWT;
+
   //MAIN
   public static void main(String arg[]) {
     System.out.println("Welcome to Bogota, Mr. Thomas Anderson.");
     System.out.println(arg[0]);
+
+    long startAll = System.currentTimeMillis();   
+
     if(arg.length==2){
       regEx = arg[0];
       text = arg[1];
@@ -57,135 +64,162 @@ public class RegEx {
       for (int i=1;i<regEx.length();i++) System.out.print(","+(int)regEx.charAt(i));
       System.out.println("].");
       try {
-        RegExTree ret = parse();
-        System.out.println("  >> Tree result: "+ret.toString()+".");
-
-        // Print Arbre Syntaxique 
-        Automata resSyntaxTree = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()); 
-        resSyntaxTree = resSyntaxTree.toSyntaxTree(ret);
-
-        FileWriter writer = new FileWriter("arbre_syntaxique.dot");
-			  writer.write("digraph {\n");
-        for (Automata.Transition t : resSyntaxTree.transitions){
-          writer.write("\t" + t.getStartState() + "->" + t.getEndState() + "\n");
+        boolean hasit = false;
+        for (int i=1;i<regEx.length();i++){
+          char c = regEx.charAt(i);
+          if(c=='|' || c=='+' || c=='(' || c==')' || c=='*' || c=='.'){
+            hasit=true;
+            break;
+          }
         }
-
-        writer.write("}\n");
-        writer.close();
-
-        Process process;
-		    try {
-			    process = Runtime.getRuntime().exec("dot -Tpng arbre_syntaxique.dot -o arbre_syntaxique.png");
-          process.waitFor();
-        } catch (IOException | InterruptedException e) {
-          e.printStackTrace();
-        }
-
-        // Print NDFA
-        Automata res = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-        res = res.toNDFA(ret);
+        if(hasit){   
         
-        writer = new FileWriter("NDFA.dot");
-			  writer.write("digraph {\n\trankdir=LR;\n\n");
-        for (String s : res.finalStates){
-          writer.write("\t" + s + " [shape=doublecircle]\n");
-        }
-        for (String s : res.initialStates){
-          writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
-        }
+          RegExTree ret = parse();
+          System.out.println("  >> Tree result: "+ret.toString()+".");
 
+          // Print Arbre Syntaxique 
+          Automata resSyntaxTree = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()); 
+          resSyntaxTree = resSyntaxTree.toSyntaxTree(ret);
+          /* 
+          startWT = System.currentTimeMillis();
+          FileWriter writer = new FileWriter("arbre_syntaxique.dot");
+          writer.write("digraph {\n");
+          for (Automata.Transition t : resSyntaxTree.transitions){
+            writer.write("\t" + t.getStartState() + "->" + t.getEndState() + "\n");
+          }
 
-        writer.write("\n");
+          writer.write("}\n");
+          writer.close();
 
-        for (Automata.Transition t : res.transitions){
-          writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
-        }
-        
-			  writer.write("}\n");
-        writer.close();
+          Process process;
+          try {
+            process = Runtime.getRuntime().exec("dot -Tpng arbre_syntaxique.dot -o arbre_syntaxique.png");
+            process.waitFor();
+          } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+          }
+          endWT = System.currentTimeMillis();
+          */
+          // Print NDFA
+          Automata res = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+          res = res.toNDFA(ret);
+          /*
+          startNFDA = System.currentTimeMillis();
+          writer = new FileWriter("NDFA.dot");
+          writer.write("digraph {\n\trankdir=LR;\n\n");
+          for (String s : res.finalStates){
+            writer.write("\t" + s + " [shape=doublecircle]\n");
+          }
+          for (String s : res.initialStates){
+            writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
+          }
 
-		    try {
-			    process = Runtime.getRuntime().exec("dot -Tpng NDFA.dot -o NDFA.png");
-          process.waitFor();
-        } catch (IOException | InterruptedException e) {
-          e.printStackTrace();
-        }
+          writer.write("\n");
 
-        // Print DFA
-        Automata resDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-        resDFA = resDFA.toDFA(res);
+          for (Automata.Transition t : res.transitions){
+            writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
+          }
+          
+          writer.write("}\n");
+          writer.close();
+          
+          try {
+            process = Runtime.getRuntime().exec("dot -Tpng NDFA.dot -o NDFA.png");
+            process.waitFor();
+          } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+          }
+          endNFDA = System.currentTimeMillis();
+                  */
+          // Print DFA
+          Automata resDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+          resDFA = resDFA.toDFA(res);
+          /*
+          startDFA = System.currentTimeMillis();
+          writer = new FileWriter("DFA.dot");
+          writer.write("digraph {\n\trankdir=LR;\n\n");
+          for (String s : resDFA.getFinalStates()){
+            writer.write("\t" + s + " [shape=doublecircle]\n");
+          }
+          for (String s : resDFA.initialStates){
+            writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
+          }
 
-        writer = new FileWriter("DFA.dot");
-			  writer.write("digraph {\n\trankdir=LR;\n\n");
-        for (String s : resDFA.getFinalStates()){
-          writer.write("\t" + s + " [shape=doublecircle]\n");
-        }
-        for (String s : resDFA.initialStates){
-          writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
-        }
+          writer.write("\n");
 
-        writer.write("\n");
+          for (Automata.Transition t : resDFA.transitions){
+            writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
+          }
+          
+          writer.write("}\n");
+          writer.close();
+          
+          try {
+            process = Runtime.getRuntime().exec("dot -Tpng DFA.dot -o DFA.png");
+            process.waitFor();
+          } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+          }
+          endDFA = System.currentTimeMillis();
+          */
 
-        for (Automata.Transition t : resDFA.transitions){
-          writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
-        }
-        
-			  writer.write("}\n");
-        writer.close();
+          // Print Min-DFA
+          //System.out.println("/*********************************** Min-DFA ***********************************/");
+          Automata resMDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+          resMDFA = resMDFA.toMinDFA(resDFA);
 
-		    try {
-			    process = Runtime.getRuntime().exec("dot -Tpng DFA.dot -o DFA.png");
-          process.waitFor();
-        } catch (IOException | InterruptedException e) {
-          e.printStackTrace();
-        }
+          /* 
+          startMDFA = System.currentTimeMillis();
+          writer = new FileWriter("Min-DFA.dot");
+          writer.write("digraph {\n\trankdir=LR;\n\n");
+          for (String s : resMDFA.getFinalStates()){
+            writer.write("\t" + s + " [shape=doublecircle]\n");
+          }
+          for (String s : resMDFA.initialStates){
+            writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
+          }
+          
+          writer.write("\n");
 
-
-        // Print Min-DFA
-        //System.out.println("/*********************************** Min-DFA ***********************************/");
-        Automata resMDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-        resMDFA = resMDFA.toMinDFA(resDFA);
-
-        writer = new FileWriter("Min-DFA.dot");
-			  writer.write("digraph {\n\trankdir=LR;\n\n");
-        for (String s : resMDFA.getFinalStates()){
-          writer.write("\t" + s + " [shape=doublecircle]\n");
-        }
-        for (String s : resMDFA.initialStates){
-          writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
-        }
-        
-        writer.write("\n");
-
-        for (Automata.Transition t : resMDFA.transitions){
-          writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
-        }
-        
-			  writer.write("}\n");
-        writer.close();
-
-        if(arg.length==2){
-          int cptOcc = resMDFA.search(text);
-          System.out.println("We found "+cptOcc+" occurences of pattern.");
-        }
-
-		    try {
-			    process = Runtime.getRuntime().exec("dot -Tpng Min-DFA.dot -o Min-DFA.png");
-          process.waitFor();
-        } catch (IOException | InterruptedException e) {
-          e.printStackTrace();
-        }
-
+          for (Automata.Transition t : resMDFA.transitions){
+            writer.write("\t" + t.getStartState() + "->" + t.getEndState() + " [label= \"" +t.getTransitionSymbol() + "\"];\n");
+          }
+          
+          writer.write("}\n");
+          writer.close();
+          endMDFA = System.currentTimeMillis();
+          */
+          if(arg.length==2){
+            int cptOcc = resMDFA.search(text);
+            System.out.println("We found "+cptOcc+" occurences of pattern.");
+          }
+          /*
+          startDOT = System.currentTimeMillis();
+          try {
+            process = Runtime.getRuntime().exec("dot -Tpng Min-DFA.dot -o Min-DFA.png");
+            process.waitFor();
+          } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+          }
+          endDOT = System.currentTimeMillis();
+          */
+        }else{
+          int cpt = processKMP(text, regEx);
+          System.out.println("We found "+cpt+" occurences of pattern.");
+        } 
       } catch (Exception e) {
         System.err.println("  >> ERROR: syntax error for regEx \""+regEx+"\"." );
-      }
-
-      
+      }    
     }
 
     System.out.println("  >> ...");
     System.out.println("  >> Parsing completed.");
     System.out.println("Goodbye Mr. Anderson.");
+
+    long endAll = System.currentTimeMillis(); 
+    
+    long totalTime = endAll-startAll;
+    System.out.println("Execution time : "+totalTime+"ms"); 
   }
 
   //FROM REGEX TO SYNTAX TREE
@@ -370,28 +404,75 @@ public class RegEx {
   }
   
   //read file
-  public static String readFile(String path){
-    StringBuilder sb = new StringBuilder();
+  public static int processKMP(String path, String pattern){
+    File directory = new File(path);
     String strLine = "";
-    String str_data = "";
+    int cpt = 0;
+    System.out.println("Reading: "+directory.getAbsolutePath());
     try {
         BufferedReader br = new BufferedReader(new FileReader(path));
-        while (strLine != null)
+        while ((strLine = br.readLine()) != null)
         {
-            if (strLine == null) break;
-            str_data += strLine;
-            strLine = br.readLine();
-            
+            int[] lps = computeLPSArray(regEx);
+            int index = search(strLine, pattern, lps);
+            if (index != -1) {
+              cpt++;
+              System.out.println("found: "+strLine);
+            }
         }
         br.close();
     } catch (FileNotFoundException e) {
         System.err.println("File not found");
     } catch (IOException e) {
         System.err.println("Unable to read the file.");
-    }
-        
-    return str_data;
-        
+    } 
+    return cpt;
+  }
+
+  // Compute the LPS (Longest Proper Prefix which is also Suffix) array
+  private static int[] computeLPSArray(String pattern) {
+      int length = pattern.length();
+      int[] lps = new int[length];
+      int j = 0;
+      for (int i = 1; i < length;) {
+          if (pattern.charAt(i) == pattern.charAt(j)) {
+              lps[i] = j + 1;
+              i++;
+              j++;
+          } else {
+              if (j != 0) {
+                  j = lps[j - 1];
+              } else {
+                  lps[i] = 0;
+                  i++;
+              }
+          }
+      }
+      return lps;
+  }
+
+  // Search for the pattern in the given text using KMP algorithm
+  private static int search(String text, String pattern, int[] lps) {
+      int i = 0;
+      int j = 0;
+      while (i < text.length()) {
+          if (text.charAt(i) == pattern.charAt(j)) {
+              i++;
+              j++;
+              if (j == pattern.length()) {
+                  // Pattern found, return the starting index of the occurrence
+                  return i - j;
+              }
+          } else {
+              if (j != 0) {
+                  j = lps[j - 1];
+              } else {
+                  i++;
+              }
+          }
+      }
+      // Pattern not found in the text
+      return -1;
   }
 
   //EXAMPLE
@@ -441,8 +522,6 @@ class RegExTree {
     return Character.toString((char)root);
   }
 }
-
-
 
 class Automata {
   class Transition {
@@ -976,15 +1055,12 @@ class Automata {
    */
   public int search(String path){
     File directory = new File(path);
-    StringBuilder sb = new StringBuilder();
     String strLine = "";
-    String str_data = "";
     int cpt=0;
     System.out.println("Reading: "+directory.getAbsolutePath());
     try {
         BufferedReader br = new BufferedReader(new FileReader(directory.getAbsolutePath()));
         
-        str_data += strLine;
         while ((strLine = br.readLine()) != null)
         {
           for (String init : this.initialStates) {
@@ -993,7 +1069,6 @@ class Automata {
               System.out.println(strLine);
             }
           }
-          str_data += strLine;
         }
         br.close();
     } catch (FileNotFoundException e) {

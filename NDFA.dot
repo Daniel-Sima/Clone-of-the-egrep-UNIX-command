@@ -1,12 +1,39 @@
 digraph {
 	rankdir=LR;
 
-	5 [shape=doublecircle]
+	16 [shape=doublecircle]
 	0 [style=filled, fillcolor="lightblue"]
 
 	0->1 [label= "S"];
 	2->3 [label= "a"];
-	1->2 [label= "ε"];
 	4->5 [label= "g"];
-	3->4 [label= "ε"];
+	6->2 [label= "ε"];
+	6->4 [label= "ε"];
+	3->7 [label= "ε"];
+	5->7 [label= "ε"];
+	8->9 [label= "r"];
+	10->6 [label= "ε"];
+	10->8 [label= "ε"];
+	7->11 [label= "ε"];
+	9->11 [label= "ε"];
+	1010->66 [label= "ε"];
+	1010->88 [label= "ε"];
+	66->22 [label= "ε"];
+	66->44 [label= "ε"];
+	88->99 [label= "r"];
+	22->33 [label= "a"];
+	44->55 [label= "g"];
+	99->1111 [label= "ε"];
+	33->77 [label= "ε"];
+	55->77 [label= "ε"];
+	77->1111 [label= "ε"];
+	11->1010 [label= "ε"];
+	1111->1010 [label= "ε"];
+	11->12 [label= "ε"];
+	1111->12 [label= "ε"];
+	1->10 [label= "ε"];
+	13->14 [label= "o"];
+	12->13 [label= "ε"];
+	15->16 [label= "n"];
+	14->15 [label= "ε"];
 }
