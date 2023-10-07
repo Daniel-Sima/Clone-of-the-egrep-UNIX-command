@@ -39,8 +39,8 @@ public class RegEx {
 
   //MAIN
   public static void main(String arg[]) {
-    System.out.println("Welcome to Bogota, Mr. Thomas Anderson.");
-    System.out.println(arg[0]);
+    System.out.println("Welcome to M2 STL.");
+    System.out.println("RegEx: "+arg[0]);
 
     long startAll = System.currentTimeMillis();   
 
@@ -63,6 +63,7 @@ public class RegEx {
       System.out.print("  >> ASCII codes: ["+(int)regEx.charAt(0));
       for (int i=1;i<regEx.length();i++) System.out.print(","+(int)regEx.charAt(i));
       System.out.println("].");
+      // TODO voir pq psq si pas ces caracteres ca marche pas
       try {
         boolean hasit = false;
         for (int i=1;i<regEx.length();i++){
@@ -80,7 +81,7 @@ public class RegEx {
           // Print Arbre Syntaxique 
           Automata resSyntaxTree = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()); 
           resSyntaxTree = resSyntaxTree.toSyntaxTree(ret);
-          /* 
+          
           startWT = System.currentTimeMillis();
           FileWriter writer = new FileWriter("arbre_syntaxique.dot");
           writer.write("digraph {\n");
@@ -99,11 +100,11 @@ public class RegEx {
             e.printStackTrace();
           }
           endWT = System.currentTimeMillis();
-          */
+          
           // Print NDFA
           Automata res = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
           res = res.toNDFA(ret);
-          /*
+          
           startNFDA = System.currentTimeMillis();
           writer = new FileWriter("NDFA.dot");
           writer.write("digraph {\n\trankdir=LR;\n\n");
@@ -130,11 +131,11 @@ public class RegEx {
             e.printStackTrace();
           }
           endNFDA = System.currentTimeMillis();
-                  */
+                  
           // Print DFA
           Automata resDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
           resDFA = resDFA.toDFA(res);
-          /*
+          
           startDFA = System.currentTimeMillis();
           writer = new FileWriter("DFA.dot");
           writer.write("digraph {\n\trankdir=LR;\n\n");
@@ -161,22 +162,26 @@ public class RegEx {
             e.printStackTrace();
           }
           endDFA = System.currentTimeMillis();
-          */
+          
 
           // Print Min-DFA
           //System.out.println("/*********************************** Min-DFA ***********************************/");
           Automata resMDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
           resMDFA = resMDFA.toMinDFA(resDFA);
 
-          /* 
+          
           startMDFA = System.currentTimeMillis();
           writer = new FileWriter("Min-DFA.dot");
           writer.write("digraph {\n\trankdir=LR;\n\n");
           for (String s : resMDFA.getFinalStates()){
-            writer.write("\t" + s + " [shape=doublecircle]\n");
+            writer.write("\t\"" + s + "\" [shape=doublecircle]\n");
           }
-          for (String s : resMDFA.initialStates){
-            writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
+          if (resMDFA.initialStates.size() > 1){
+            writer.write("\t\"" + resMDFA.initialStates + "\" [style=filled, fillcolor=\"lightblue\"]\n");
+          } else {
+            for (String s : resMDFA.initialStates){
+              writer.write("\t" + s + " [style=filled, fillcolor=\"lightblue\"]\n");
+            }
           }
           
           writer.write("\n");
@@ -188,12 +193,12 @@ public class RegEx {
           writer.write("}\n");
           writer.close();
           endMDFA = System.currentTimeMillis();
-          */
+          
           if(arg.length==2){
             int cptOcc = resMDFA.search(text);
             System.out.println("We found "+cptOcc+" occurences of pattern.");
           }
-          /*
+          
           startDOT = System.currentTimeMillis();
           try {
             process = Runtime.getRuntime().exec("dot -Tpng Min-DFA.dot -o Min-DFA.png");
@@ -202,7 +207,7 @@ public class RegEx {
             e.printStackTrace();
           }
           endDOT = System.currentTimeMillis();
-          */
+          
         }else{
           int cpt = processKMP(text, regEx);
           System.out.println("We found "+cpt+" occurences of pattern.");
@@ -708,7 +713,7 @@ class Automata {
         transitions.add(new Transition(lastFinalEtatR2, "ε", finalStates.get(initialStates.size()-1)));
         numberStates += 2;
       } else if ((tree.rootToString() == "+")) {
-        System.err.println("/////////////////////////////////////////////////////");
+        // System.err.println("/////////////////////////////////////////////////////");
         //printTransitions();
         String lastInitialEtat = initialStates.get(initialStates.size()-1);
         String lastFinalEtat = finalStates.get(finalStates.size()-1);
@@ -741,9 +746,10 @@ class Automata {
         //System.out.println("--------> finalStates: "+finalStates);
         //System.out.println("--------> initialStates: "+initialStates);
         //System.err.println("/////////////////////////////////////////////////////");
-      } else {
-        System.out.println("===> negliger?: "+tree.rootToString());
-      }
+      } 
+      // else {
+      //   System.out.println("===> negliger?: "+tree.rootToString());
+      // }
     }  
     return resAutomata;
   }
@@ -894,45 +900,51 @@ class Automata {
    * @return
    */
   public Set<Set<String>> decoupage(Set<Set<String>> ensembleTotal,  ArrayList<HashMap<String, String>> tabTransitions, String symboles, int i){
-    if (i == symboles.length()){
-      return ensembleTotal;
-    }
-
-    String symbole = ""+symboles.charAt(i); 
-    Set<Set<String>> ensembleTotalBis = new LinkedHashSet<>(ensembleTotal);
-
-    for (Set<String> ens : ensembleTotal){
-      //System.out.println("==> ens: "+ens+" i: "+i);
-      if (!(ens.size() == 1)){
-        int cpt = 0;
-        Set<String> dedans = new LinkedHashSet<>();
-        Set<String> pasDedans = new LinkedHashSet<>();
-        for (HashMap<String, String> table : tabTransitions){
-          if (ens.contains(""+cpt)) {
-            if (table.containsKey(symbole)){
-              dedans.add(""+cpt);
-            } else {
-              pasDedans.add(""+cpt);
-            }
-          }
-          cpt++;
-        }
-        ensembleTotalBis.remove(ens);
-        if (!dedans.isEmpty()){
-          ensembleTotalBis.add(dedans);
-        }
-        if (!pasDedans.isEmpty()){
-          ensembleTotalBis.add(pasDedans);
-        }
-        //System.out.println("==> dedans: "+dedans);        
-        //System.out.println("==> pasDedans: "+pasDedans);
-
+      if (i == symboles.length()){
+        return ensembleTotal;
       }
-    }
 
-    //System.out.println("==> ensembleTotalBis: "+ensembleTotalBis+" i: "+i+"\n");
-    return decoupage(ensembleTotalBis, tabTransitions, symboles, (i+1));
-  }
+      String symbole = ""+symboles.charAt(i); 
+      Set<Set<String>> ensembleTotalBis = new LinkedHashSet<>(ensembleTotal);
+      
+      // System.out.println();
+
+      for (Set<String> ens : ensembleTotal){
+        // System.out.println("==> ens: "+ens+" i: "+i);
+        if (!(ens.size() == 1)){
+          int cpt = 0;
+          Set<String> dedans = new LinkedHashSet<>();
+          Set<String> pasDedans = new LinkedHashSet<>();
+          for (HashMap<String, String> table : tabTransitions){
+            if (!table.isEmpty() && ens.contains(""+cpt)) {
+              if (table.containsKey(symbole) ){
+                dedans.add(""+cpt);
+              } else {
+                pasDedans.add(""+cpt);
+              }
+            }
+            cpt++;
+          }
+
+          if (dedans.isEmpty()){
+          ens.removeAll(pasDedans);
+          dedans = ens;
+          }
+          ensembleTotalBis.remove(ens);
+          if (!dedans.isEmpty()){
+            ensembleTotalBis.add(dedans);
+          }
+          if (!pasDedans.isEmpty()){
+            ensembleTotalBis.add(pasDedans);
+          }
+          // System.out.println("==> dedans: "+dedans);        
+          // System.out.println("==> pasDedans: "+pasDedans);
+        }
+      }
+
+      // System.out.println("==> ensembleTotalBis: "+ensembleTotalBis+" i: "+i+"\n");
+      return decoupage(ensembleTotalBis, tabTransitions, symboles, (i+1));
+    }
 
   /**
    * Minimisation de l'automate deterministe DFA.
@@ -943,6 +955,7 @@ class Automata {
   public Automata toMinDFA(Automata DFA){
     ArrayList<HashMap<String, String>> tabTransitions = new ArrayList<>();
 
+    // DFA.printTransitions();
     // Recuperation du tableau des transitions
     for (Transition e : DFA.getTransitions()){
       // Si rien n'a ete ajoute encore
@@ -950,10 +963,23 @@ class Automata {
         HashMap<String, String> val = new HashMap<>();
         val.put(e.getTransitionSymbol(), e.getEndState());
         tabTransitions.add(Integer.parseInt(e.getStartState()), val);
+      } else if (tabTransitions.size() < Integer.parseInt(e.getStartState())) {
+        // On remplit les cases du tableau jusqu'a la case interesse par des elements nuls 
+        for (int i=tabTransitions.size(); i<=Integer.parseInt(e.getStartState()); i++){
+          HashMap<String, String> val = new HashMap<>();
+          tabTransitions.add(i, val);
+          if (i == Integer.parseInt(e.getStartState())){
+            tabTransitions.get(Integer.parseInt(e.getStartState())).put(e.getTransitionSymbol(), e.getEndState());
+          }
+        }
       } else {
         tabTransitions.get(Integer.parseInt(e.getStartState())).put(e.getTransitionSymbol(), e.getEndState());
       }
     }
+
+    // System.out.println("======> tabTransitions: "+tabTransitions);
+
+
 
     Set<String> ensembleFinaux = new LinkedHashSet<>();
     for (String finaux : DFA.finalStates){
@@ -966,28 +992,27 @@ class Automata {
         ensembleNonFinaux.add(""+i);
       }
     }
-    /* 
-    System.out.println(tabTransitions);
-    System.out.println("--> Set finaux: "+ensembleFinaux);    
-    System.out.println("--> Set non finaux: "+ensembleNonFinaux);
-    System.out.println("--> Symboles: "+DFA.getSymbolesTransition());
-    */
+
+    // System.out.println("--> Set finaux: "+ensembleFinaux);    
+    // System.out.println("--> Set non finaux: "+ensembleNonFinaux);
+
+    // System.out.println("--> Symboles: "+DFA.getSymbolesTransition());
     Set<Set<String>> ensembleTotal = new LinkedHashSet<>();
     ensembleTotal.add(ensembleFinaux); ensembleTotal.add(ensembleNonFinaux);
     ensembleTotal = decoupage(ensembleTotal, tabTransitions, DFA.getSymbolesTransition(), 0);
-    /*
-    System.out.println("--> ensembleTotal: "+ensembleTotal);
-    System.out.println("--> Transitions actuelles: "+transitions);
-    */
+    // System.out.println("--> ensembleTotal: "+ensembleTotal);
+    // System.out.println("--> Transitions actuelles: "+transitions);
+
     for (Set<String> ens : ensembleTotal){
        Iterator<String> it = ens.iterator();
         while (it.hasNext()) {
           String indexString = it.next();
           int indexInt = Integer.parseInt(indexString);
           if (!(tabTransitions.size() <= indexInt)){
+          // if (tabTransitions.size() > indexInt){
             for (Map.Entry<String, String> entry : tabTransitions.get(indexInt).entrySet()) {
               Set<String> endSet = getSetFromSets(ensembleTotal, entry.getValue());
-              if ((ens.size() == 1) && (endSet.size() == 1)){
+              if ((ens.size() == 1) && (endSet.size() == 1)){ 
                 if (!transitions.contains(new Transition(indexString, entry.getKey(), entry.getValue()))){
                   transitions.add(new Transition(indexString, entry.getKey(), entry.getValue()));
                 }
@@ -1008,8 +1033,7 @@ class Automata {
           }
         }
     }
-
-    //System.out.println("--> Transitions nouvelles: "+transitions);
+    // System.out.println("--> Transitions nouvelles: "+transitions);
 
     // Recherche set de l'etat initial
     for (Set<String> ens : ensembleTotal){
@@ -1023,11 +1047,19 @@ class Automata {
     for (String s : DFA.finalStates){
       for (Set<String> ens : ensembleTotal){
         if (ens.contains(s)){
-          List<String> liste = new ArrayList<>(ens);
-          finalStates.addAll(liste);
+          if (!finalStates.contains(s) && !finalStates.contains(ens.toString())){
+            List<String> liste = new ArrayList<>();
+            if (ens.size() > 1){
+              liste.add(ens.toString());
+            } else {
+              liste.add(s);
+            }
+            finalStates.addAll(liste);
+          }
         }
       }
     }
+    // System.out.println("=====> finalStates: "+finalStates);
 
     return this;
   }
