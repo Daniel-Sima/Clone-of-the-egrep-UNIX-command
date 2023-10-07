@@ -13,6 +13,13 @@ import java.util.List;
 import java.util.Set;
 
 import java.io.*;
+
+/***************************************************************************************/
+/***************************************************************************************/
+/***************************************************************************************/
+/**
+ * Classe gerant les RegEx.
+ */
 public class RegEx {
   //MACROS
   static final int CONCAT = 0xC04CA7;
@@ -27,34 +34,38 @@ public class RegEx {
   
   //REGEX
   private static String regEx;
+  
   //TEXT
   private static String text;
   
-  //CONSTRUCTOR
+  //CONSTRUCTORS
   public RegEx(){}
+  
+  public RegEx(String regex){
+	  this.regEx = regex;
+  }
 
   //TIME
   private static long startDFA,startDOT,startMDFA,startNFDA,startWT;
-  private static long endDFA,endDOT,endMDFA,endNFDA,endWT;
-
+  private static long endDFA,endDOT,endMDFA,endNFDA,endWT,endAll,totalDOT;
+  
   //MAIN
   public static void main(String arg[]) throws IOException {
     FileWriter writer;
     System.out.println("Welcome to M2 STL.");
-    System.out.println("RegEx: "+arg[0]);
 
     long startAll = System.currentTimeMillis();   
 
-    if(arg.length==2){
+    if (arg.length == 2){
       regEx = arg[0];
       text = arg[1];
     } else if (arg.length==1) {
       regEx = arg[0];
     } else {
-      try (Scanner scanner = new Scanner(System.in)) {
-        System.out.print("  >> Please enter a regEx: ");
-        regEx = scanner.next();
-      }
+      Scanner scanner = new Scanner(System.in);
+      System.out.print("  >> Please enter a regEx: ");
+      regEx = scanner.next();
+      scanner.close();
     }
     System.out.println("  >> Parsing regEx \""+regEx+"\".");
     System.out.println("  >> ...");
@@ -75,14 +86,17 @@ public class RegEx {
             break;
           }
         }
-        if(hasit){   
         
+        if(hasit){   
           RegExTree ret = parse();
           System.out.println("  >> Tree result: "+ret.toString()+".");
 
-          // Print Arbre Syntaxique 
+          /* Partie Arbre Syntaxique 
+           * (en utilisant la structure de donnees Automate pour stocker les transitions) */
           Automata resSyntaxTree = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()); 
+          startWT = System.currentTimeMillis();
           resSyntaxTree = resSyntaxTree.toSyntaxTree(ret);
+          endWT = System.currentTimeMillis();
           
           startWT = System.currentTimeMillis();
           writer = new FileWriter("arbre_syntaxique.dot");
@@ -101,13 +115,17 @@ public class RegEx {
           } catch (IOException | InterruptedException e) {
             e.printStackTrace();
           }
-          endWT = System.currentTimeMillis();
+          endDOT = System.currentTimeMillis();
+          totalDOT = endDOT - startDOT;
           
-          // Print NDFA
+          /* Partie NDFA */
           Automata res = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-          res = res.toNDFA(ret);
-          
           startNFDA = System.currentTimeMillis();
+          res = res.toNDFA(ret);
+          endNFDA = System.currentTimeMillis();
+          
+          // Affichage du NDFA dans un fichier '.dot'
+          startDOT = System.currentTimeMillis();
           writer = new FileWriter("NDFA.dot");
           writer.write("digraph {\n\trankdir=LR;\n\n");
           for (String s : res.finalStates){
@@ -132,13 +150,18 @@ public class RegEx {
           } catch (IOException | InterruptedException e) {
             e.printStackTrace();
           }
-          endNFDA = System.currentTimeMillis();
-                  
-          // Print DFA
-          Automata resDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-          resDFA = resDFA.toDFA(res);
+          endDOT = System.currentTimeMillis();
+          totalDOT = (endDOT - startDOT);
           
+                  
+          /* Partie DFA */
+          Automata resDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
           startDFA = System.currentTimeMillis();
+          resDFA = resDFA.toDFA(res);
+          endDFA = System.currentTimeMillis();
+          
+          // Affichage du DFA dans un fichier '.dot'
+          startDOT = System.currentTimeMillis();
           writer = new FileWriter("DFA.dot");
           writer.write("digraph {\n\trankdir=LR;\n\n");
           for (String s : resDFA.getFinalStates()){
@@ -163,16 +186,19 @@ public class RegEx {
           } catch (IOException | InterruptedException e) {
             e.printStackTrace();
           }
-          endDFA = System.currentTimeMillis();
+          endDOT = System.currentTimeMillis();
+          totalDOT += (endDOT - startDOT);
+          
           
 
-          // Print Min-DFA
-          //System.out.println("/*********************************** Min-DFA ***********************************/");
+          /* Partie Min-DFA */
           Automata resMDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-          resMDFA = resMDFA.toMinDFA(resDFA);
-
-          
           startMDFA = System.currentTimeMillis();
+          resMDFA = resMDFA.toMinDFA(resDFA);
+          endMDFA = System.currentTimeMillis();
+
+          // Affichage du Min-DFA dans un fichier '.dot'
+          startDOT = System.currentTimeMillis();
           writer = new FileWriter("Min-DFA.dot");
           writer.write("digraph {\n\trankdir=LR;\n\n");
           for (String s : resMDFA.getFinalStates()){
@@ -194,14 +220,8 @@ public class RegEx {
           
           writer.write("}\n");
           writer.close();
-          endMDFA = System.currentTimeMillis();
           
-          if(arg.length==2){
-            int cptOcc = resMDFA.search(text);
-            System.out.println("We found "+cptOcc+" occurences of pattern.");
-          }
-          
-          startDOT = System.currentTimeMillis();
+
           try {
             process = Runtime.getRuntime().exec("dot -Tpng Min-DFA.dot -o Min-DFA.png");
             process.waitFor();
@@ -209,32 +229,50 @@ public class RegEx {
             e.printStackTrace();
           }
           endDOT = System.currentTimeMillis();
+          totalDOT += (endDOT - startDOT);
           
-        }else{
-          int cpt = processKMP(text, regEx);
-          System.out.println("We found "+cpt+" occurences of pattern.");
+          
+          /* Partie de recherche dans le texte TODO */ 
+          if(arg.length==2){
+        	  int cptOcc = resMDFA.search(text);
+        	  System.out.println("We found "+cptOcc+" occurences of pattern.");
+          }
+
+        } else {
+        	/* Partie KMP TODO*/
+        	int cpt = processKMP(text, regEx);
+        	System.out.println("We found "+cpt+" occurences of pattern.");
         } 
       } catch (Exception e) {
         System.err.println("  >> ERROR: syntax error for regEx \""+regEx+"\"." );
       }    
     }
 
+    
     System.out.println("  >> ...");
     System.out.println("  >> Parsing completed.");
-    System.out.println("Goodbye Mr. Anderson.");
+    System.out.println("Goodbye M2 STL. \n\n\n");
 
-    long endAll = System.currentTimeMillis(); 
+    endAll = System.currentTimeMillis(); 
     
-    long totalTime = endAll-startAll;
-    writer = new FileWriter("sample.txt", true);
-    System.out.println("Execution time : "+totalTime+"ms"); 
-
-    writer.write(regEx+" "+totalTime+"\n");
-    writer.close();
+    /* Affichages temps d'execution */
+    System.out.println("Execution times for RegEx '"+regEx+"': ");
+    System.out.println("--> Total time Arbre syntaxique = "+(endWT-startWT)+"ms");
+    System.out.println("--> Total time NDGA = "+(endNFDA-startNFDA)+"ms");
+    System.out.println("--> Total time DFA = "+(endDFA-startDFA)+"ms");
+    System.out.println("--> Total time Min-DFA = "+(endMDFA-startMDFA)+"ms");
+    System.out.println("--> Total time DOT prints = "+totalDOT+"ms");
+    System.out.println("--> All total times = "+(endAll-startAll)+"ms");
   }
-
-  //FROM REGEX TO SYNTAX TREE
-  private static RegExTree parse() throws Exception {
+  
+  /***************************************************************************************/
+  /**
+   * FROM REGEX TO SYNTAX TREE
+   * 
+   * @return RegExTree parse
+   * @throws Exception
+   */
+  static RegExTree parse() throws Exception {
     //BEGIN DEBUG: set conditionnal to true for debug example
     if (false) throw new Exception();
     RegExTree example = exampleAhoUllman();
@@ -246,6 +284,13 @@ public class RegEx {
     
     return parse(result);
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param 
+   * @return 
+   */
   private static int charToRoot(char c) {
     if (c=='.') return DOT;
     if (c=='*') return ETOILE;
@@ -255,6 +300,14 @@ public class RegEx {
     if (c==')') return PARENTHESEFERMANT; 
     return (int)c;
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param result
+   * @return
+   * @throws Exception
+   */
   private static RegExTree parse(ArrayList<RegExTree> result) throws Exception {
     while (containParenthese(result)) result=processParenthese(result);
     while (containEtoile(result)) result=processEtoile(result);
@@ -266,10 +319,25 @@ public class RegEx {
 
     return removeProtection(result.get(0));
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   */
   private static boolean containParenthese(ArrayList<RegExTree> trees) {
     for (RegExTree t: trees) if (t.root==PARENTHESEFERMANT || t.root==PARENTHESEOUVRANT) return true;
     return false;
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   * @throws Exception
+   */
   private static ArrayList<RegExTree> processParenthese(ArrayList<RegExTree> trees) throws Exception {
     ArrayList<RegExTree> result = new ArrayList<RegExTree>();
     boolean found = false;
@@ -292,14 +360,30 @@ public class RegEx {
     if (!found) throw new Exception();
     return result;
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   */
   private static boolean containEtoile(ArrayList<RegExTree> trees) {
     for (RegExTree t: trees) if (t.root==ETOILE && t.subTrees.isEmpty()) return true;
     return false;
   }
+
   private static boolean containPlus(ArrayList<RegExTree> trees) {
     for (RegExTree t: trees) if (t.root==PLUS && t.subTrees.isEmpty()) return true;
     return false;
   }
+
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   * @throws Exception
+   */
   private static ArrayList<RegExTree> processEtoile(ArrayList<RegExTree> trees) throws Exception {
     ArrayList<RegExTree> result = new ArrayList<RegExTree>();
     boolean found = false;
@@ -317,6 +401,14 @@ public class RegEx {
     }
     return result;
   }
+
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   * @throws Exception
+   */
   private static ArrayList<RegExTree> processPlus(ArrayList<RegExTree> trees) throws Exception {
     ArrayList<RegExTree> result = new ArrayList<RegExTree>();
     boolean found = false;
@@ -335,6 +427,12 @@ public class RegEx {
     return result;
   }
 
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   */
   private static boolean containConcat(ArrayList<RegExTree> trees) {
     boolean firstFound = false;
     for (RegExTree t: trees) {
@@ -343,6 +441,14 @@ public class RegEx {
     }
     return false;
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   * @throws Exception
+   */
   private static ArrayList<RegExTree> processConcat(ArrayList<RegExTree> trees) throws Exception {
     ArrayList<RegExTree> result = new ArrayList<RegExTree>();
     boolean found = false;
@@ -371,10 +477,25 @@ public class RegEx {
     }
     return result;
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   */
   private static boolean containAltern(ArrayList<RegExTree> trees) {
     for (RegExTree t: trees) if (t.root==ALTERN && t.subTrees.isEmpty()) return true;
     return false;
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param trees
+   * @return
+   * @throws Exception
+   */
   private static ArrayList<RegExTree> processAltern(ArrayList<RegExTree> trees) throws Exception {
     ArrayList<RegExTree> result = new ArrayList<RegExTree>();
     boolean found = false;
@@ -400,6 +521,14 @@ public class RegEx {
     }
     return result;
   }
+  
+  /***************************************************************************************/
+  /**
+   * 
+   * @param tree
+   * @return
+   * @throws Exception
+   */
   private static RegExTree removeProtection(RegExTree tree) throws Exception {
     if (tree.root==PROTECTION && tree.subTrees.size()!=1) throw new Exception();
     if (tree.subTrees.isEmpty()) return tree;
@@ -410,6 +539,14 @@ public class RegEx {
     return new RegExTree(tree.root, subTrees);
   }
   
+  /***************************************************************************************/
+  /**
+   * Read file
+   * 
+   * @param path of the file
+   * @param pattern RegEx
+   * @return TODO
+   */
   public static int processKMP(String path, String pattern){
     File directory = new File(path);
     String strLine = "";
@@ -435,7 +572,13 @@ public class RegEx {
     return cpt;
   }
 
-  // Compute the LPS (Longest Proper Prefix which is also Suffix) array
+  /***************************************************************************************/
+  /** TODO
+   * Compute the LPS (Longest Proper Prefix which is also Suffix) array
+   * 
+   * @param pattern
+   * @return
+   */
   private static int[] computeLPSArray(String pattern) {
       int length = pattern.length();
       int[] lps = new int[length];
@@ -457,7 +600,15 @@ public class RegEx {
       return lps;
   }
 
-  // Search for the pattern in the given text using KMP algorithm
+  /***************************************************************************************/
+  /** TODO
+   * Search for the pattern in the given text using KMP algorithm
+   * 
+   * @param text
+   * @param pattern
+   * @param lps
+   * @return
+   */
   private static int search(String text, String pattern, int[] lps) {
       int i = 0;
       int j = 0;
@@ -481,8 +632,13 @@ public class RegEx {
       return -1;
   }
 
-  //EXAMPLE
-  // --> RegEx from Aho-Ullman book Chap.10 Example 10.25
+  /***************************************************************************************/
+  /**
+   * EXAMPLE	
+   * --> RegEx from Aho-Ullman book Chap.10 Example 10.25
+   * 
+   * @return
+   */
   private static RegExTree exampleAhoUllman() {
     RegExTree a = new RegExTree((int)'a', new ArrayList<RegExTree>());
     RegExTree b = new RegExTree((int)'b', new ArrayList<RegExTree>());
@@ -501,17 +657,32 @@ public class RegEx {
   }
 }
 
-//UTILITARY CLASS
+/***************************************************************************************/
+/***************************************************************************************/
+/***************************************************************************************/
+/**
+ * UTILITARY CLASS
+ */
 class RegExTree {
   protected int root;
   protected ArrayList<RegExTree> subTrees;
 
+  /***************************************************************************************/
+  /**
+   * Constructor 
+   * 
+   * @param root
+   * @param subTrees
+   */
   public RegExTree(int root, ArrayList<RegExTree> subTrees) {
     this.root = root;
     this.subTrees = subTrees;
   }
 
-  //FROM TREE TO PARENTHESIS
+  /***************************************************************************************/
+  /**
+   * FROM TREE TO PARENTHESIS
+   */
   public String toString() {
     if (subTrees.isEmpty()) return rootToString();
     String result = rootToString()+"("+subTrees.get(0).toString();
@@ -519,6 +690,11 @@ class RegExTree {
     return result+")";
   }
 
+  /***************************************************************************************/
+  /**
+   * 
+   * @return
+   */
   public String rootToString() {
     if (root==RegEx.CONCAT) return ".";
     if (root==RegEx.ETOILE) return "*";
@@ -529,38 +705,80 @@ class RegExTree {
   }
 }
 
+/***************************************************************************************/
+/***************************************************************************************/
+/***************************************************************************************/
 /**
-  * Classe Automate
-  */
+ * Classe manipulant les automates avec ses etats et transitions
+ */
 class Automata {
+  /***************************************************************************************/
+  /**
+   * Classe gerant les etats de debut/fin et toutes les transitions
+   * sous forme ['startState' -- 'transitionSymbol' --> 'endState']
+   */
   class Transition {
     private String startState;
     private String transitionSymbol;    
     private String endState;
 
+    /***************************************************************************************/
+    /**
+     * Constructor 
+     * 
+     * @param startState Etat de debut de la transition
+     * @param transitionSymbol Symbole de la transition
+     * @param endState Etat de fin de la transition
+     */
     public Transition(String startState, String transitionSymbol, String endState) {
       this.startState = startState;
       this.transitionSymbol = transitionSymbol;
       this.endState = endState;
     }
 
+    /***************************************************************************************/
+    /**
+     * Retourne l'etat de debut de la transition
+     * 
+     * @return Chaine de caracteres de l'etat de debut 
+     */
     public String getStartState(){
       return this.startState;
     }
 
+    /***************************************************************************************/
+    /**
+     * Retourne le symbole de la transition
+     * 
+     * @return Chaine de caracteres du symbole
+     */
     public String getTransitionSymbol(){
       return this.transitionSymbol;
     }
-
+    
+    /***************************************************************************************/
+    /**
+     * Retourne l'etat de fin de la transition
+     * 
+     * @return Chaine de caracteres de l'etat de fin 
+     */
     public String getEndState(){
       return this.endState;
     }
 
+    /***************************************************************************************/
+    /**
+     * Changement du toString() Objet pour un meilleur affichage
+     */
+    @Override 
     public String toString(){
       return "[" + getStartState() + " -- " + getTransitionSymbol() +" -- >" + getEndState() + "]";
     }
 
-    /** Pour verifier les doublons selon notre implementation */
+    /***************************************************************************************/
+    /**
+     * Changement du equals() Objet pour verifier les doublons selon notre implementation
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -571,50 +789,100 @@ class Automata {
                Objects.equals(transitionSymbol, nouvelle.getTransitionSymbol());
     }
   }
-
+  
+  /***************************************************************************************/
   /**
-   * Classe permettant de retourner deux valeurs de type different
+   * Classe permettant de retourner deux valeurs de type different (K, V)
    */
   class Pair<K, V> {
     private K key;
     private V value;
 
+    /***************************************************************************************/
+    /**
+     * Constructor
+     * 
+     * @param key
+     * @param value
+     */
     public Pair(K key, V value){
       this.key = key;
       this.value = value;
     }
 
+    /***************************************************************************************/
+    /**
+     * Retourne la cle 
+     * 
+     * @return cle du Pair
+     */
     public K getKey(){
       return key;
     }
 
+    /***************************************************************************************/
+    /**
+     * Retourne valeur
+     * 
+     * @return valeur du Pair
+     */
      public V getValue(){
       return value;
     }
 
+    /***************************************************************************************/
+     /**
+      * Modifier la cle 
+      * 
+      * @param key 
+      */
     public void setKey(K key){
       this.key = key;
     }
-
+    /***************************************************************************************/
+    /**
+     * Modifier la valeur
+     * 
+     * @param value
+     */
     public void setValue(V value){
       this.value = value;
     }
   }
 
-  protected ArrayList<String> initialStates; // AR
+  protected ArrayList<String> initialStates; // ArrayList pusique necessaire pour stocker plusieurs lors du parcours et pour la Min-DFA
   protected ArrayList<String> finalStates;
   protected ArrayList<Transition> transitions;  
+  // Poour garanir que tous les etats ont un numero different (necessaire pour generer le '.dot')
   protected Integer numberStates = 0;
 
-
+  //DEBUG
+  private static boolean DEBUG = false;
+  
+  /**
+   * Constructor 
+   * 
+   * @param initialState
+   * @param finalStates
+   * @param transitions
+   */
   public Automata (ArrayList<String> initialState, ArrayList<String> finalStates, ArrayList<Transition> transitions){
     this.initialStates = initialState;
     this.finalStates = finalStates;
     this.transitions = transitions;
   }
 
-   /** RegExTree to dot */
+  /***************************************************************************************/
+  /**
+   * Charge un RegExTree dans la classe 'Automata' pour permettre l'affichage en fichier
+   * '.dot' en utilisant les 'transitions'. Les listes 'initialState' et 'finalStates' servent 
+   * a sotcker le premier et dernier etat visite. 
+   * 
+   * @param tree RegExTree
+   * @return
+   */
   public Automata toSyntaxTree(RegExTree tree){
+	  // Si plus de fils on fait la 'transition' avec son pere
     if (tree.subTrees.isEmpty()){
       transitions.add(new Transition(initialStates.get(initialStates.size()-1), null, ("\""+tree.rootToString()+"__"+(numberStates++))+"\""));
       return new Automata(initialStates, finalStates, transitions);
@@ -622,16 +890,22 @@ class Automata {
 
     Automata resAutomata = null;
     for (int i=0; i<tree.subTrees.size(); i++){
+      // Si on recommence un nouveau parcours de fils, alors on se connecte a son pere s'il y en a un
       if (!(initialStates.isEmpty()) && i == 0) {
         transitions.add(new Transition(initialStates.get(initialStates.size()-1), null, "\""+tree.rootToString()+"__"+(numberStates)+"\""));
         initialStates.add("\""+tree.rootToString()+"__"+(numberStates++)+"\"");
       }  
+      // Cas premier pere
       if (initialStates.isEmpty()){
         initialStates.add("\""+tree.rootToString()+"__"+(numberStates++)+"\"");
       }
 
+      // Appel recursif sur le second fils s'il existe
       resAutomata = toSyntaxTree(tree.subTrees.get(i));
       
+      // Si on est a parcourir le second fils (i=1) et que la root est ETOIL ou PLUS
+      // alors plus de fils a parcourir car operateurs unaires et on s'efface de la liste
+      // de stockage
       if ((!(initialStates.isEmpty()) && i == 1) || (tree.rootToString() == "*") || (tree.rootToString() == "+")) {
         initialStates.remove(initialStates.size()-1);
       } 
@@ -640,21 +914,22 @@ class Automata {
     return resAutomata;
   }
 
+   /***************************************************************************************/
    /**
-    * Trouve toute les transitions entre un etat de depart (present dans 'statesToSearch') et de fin.
-    * Change leur numeros.
-    * A REVOIR CAS PARTICULIERS
+    * Trouve toutes les transitions entre un etat de depart (present dans 'statesToSearch') et jusqu'a
+    * plus avoir d'etat.
+    * Change leur numeros pour le fichier '.dot'.
     *
-    * @param startState
-    * @param accTransitions
-    * @param statesToSearch
-    * @return
+    * @param accTransitions Accumulateur de transitions
+    * @param statesToSearch Etats qui restent à pacourir
+    * @return Liste avec toutes les transitions depuis le premier etat de 'statesToSearch'
     */
   public ArrayList<Transition> findTransitionsBetweenStates(ArrayList<Transition> accTransitions, ArrayList<String> statesToSearch){
     ArrayList<String> newStatesToSearch = new ArrayList<>();
     for (String etat : statesToSearch){
       for (Transition e : transitions){
         if (e.getStartState().equals(etat)){
+          // Duplication du numero pour etre sur de ne pas avoir deux fois le meme 
           accTransitions.add(new Transition(e.getStartState()+e.getStartState(), e.getTransitionSymbol(), e.getEndState()+e.getEndState()));
           if (!newStatesToSearch.contains(e.getEndState())){
             newStatesToSearch.add(e.getEndState());
@@ -670,8 +945,15 @@ class Automata {
     return accTransitions;
   }
 
-   /** From tree to automata (NFDA) */
+  /***************************************************************************************/
+  /**
+   * Converit un 'RegExTree' en 'Automata' NFDA
+   * 
+   * @param tree RegExTree a convertir
+   * @return Automata convertit depuis 'tree'
+   */
   public Automata toNDFA(RegExTree tree) {
+	// Si plus de fils, transition entre le noeud courant et son pere
     if (tree.subTrees.isEmpty()) {
       initialStates.add(""+numberStates);
       finalStates.add(""+(numberStates+1));
@@ -685,6 +967,7 @@ class Automata {
     for (int i=0; i<tree.subTrees.size(); i++){
       resAutomata = toNDFA(tree.subTrees.get(i));
       
+      // Application de la regle de "closure"
       if (tree.rootToString() == "*"){
         // R1
         String lastInitialEtat = initialStates.remove(initialStates.size()-1);
@@ -696,12 +979,16 @@ class Automata {
         transitions.add(new Transition(lastFinalEtat, "ε", finalStates.get(finalStates.size()-1)));
         transitions.add(new Transition(initialStates.get(initialStates.size()-1), "ε", finalStates.get(finalStates.size()-1)));
         numberStates += 2;
-      } else if ((tree.rootToString() == ".") && (i != 0)){
+      } 
+      // Application de la regle de "concatenation", applicable que si on est le second fils
+      else if ((tree.rootToString() == ".") && (i != 0)){
         // R2
         String lastInitialEtat = initialStates.remove(initialStates.size()-1);
         String lastFinalEtat = finalStates.remove(finalStates.size()-2); 
         transitions.add(new Transition(lastFinalEtat, "ε", lastInitialEtat));
-      } else if ((tree.rootToString() == "|") && (i != 0)) {
+      } 
+      // Application de la regle de "union", applicable que si on est le second fils
+      else if ((tree.rootToString() == "|") && (i != 0)) {
         // R2
         String lastInitialEtatR2 = initialStates.remove(initialStates.size()-1);
         String lastFinalEtatR2 = finalStates.remove(finalStates.size()-1);
@@ -716,21 +1003,28 @@ class Automata {
         transitions.add(new Transition(lastFinalEtatR1, "ε", finalStates.get(initialStates.size()-1)));
         transitions.add(new Transition(lastFinalEtatR2, "ε", finalStates.get(initialStates.size()-1)));
         numberStates += 2;
-      } else if ((tree.rootToString() == "+")) {
-        // System.err.println("/////////////////////////////////////////////////////");
-        //printTransitions();
+      } 
+      // Application de la regle de "PLUS"
+      else if ((tree.rootToString() == "+")) {
+    	if (DEBUG) {
+    		System.out.println(); 
+    		printTransitions();    		
+    	}
         String lastInitialEtat = initialStates.get(initialStates.size()-1);
         String lastFinalEtat = finalStates.get(finalStates.size()-1);
-        //System.out.println("lastInitialEtat: "+lastInitialEtat);
-        //System.out.println("lastFinalEtat: "+lastFinalEtat);
+        if (DEBUG) {
+        	System.out.println("lastInitialEtat: "+lastInitialEtat);
+        	System.out.println("lastFinalEtat: "+lastFinalEtat); 		
+    	}
 
         ArrayList<Transition> plusTransitons = new ArrayList<>();
         ArrayList<String> statesToSearch = new ArrayList<>(); 
         statesToSearch.add(lastInitialEtat);
+        // Recopie de l'automate de l'argument du PLUS ([argument]+)
         plusTransitons = findTransitionsBetweenStates(plusTransitons, statesToSearch);
 
-        
         transitions.addAll(plusTransitons);
+        // Changement des etats finaux et inital
         String newInitialEtat = plusTransitons.get(0).getStartState();
         String newFinalEtat = plusTransitons.get(plusTransitons.size()-1).getEndState();
 
@@ -739,20 +1033,19 @@ class Automata {
 
         // Etat ultime de l'automate avec PLUS
         String newFinalFinalEtat = ""+numberStates; numberStates++;
-        //System.out.println("====> ce: "+newFinalFinalEtat);
+
         finalStates.remove(finalStates.size()-1);
         finalStates.add(newFinalFinalEtat);
         transitions.add(new Transition(lastFinalEtat, "ε", newFinalFinalEtat));
         transitions.add(new Transition(newFinalEtat, "ε", newFinalFinalEtat));
 
-
-
-        //System.out.println("--------> finalStates: "+finalStates);
-        //System.out.println("--------> initialStates: "+initialStates);
-        //System.err.println("/////////////////////////////////////////////////////");
+        if (DEBUG) {
+        	System.out.println(); 
+        	System.out.println("--------> finalStates: "+finalStates);
+        	System.out.println("--------> initialStates: "+initialStates);        	
+        }
       } 
       // else {
-      //   System.out.println("===> negliger?: "+tree.rootToString());
       // }
     }  
     return resAutomata;
@@ -762,6 +1055,13 @@ class Automata {
    * Getting epsilon close inital states
    * 
    * @return ArrayList with initals states
+   */
+  /***************************************************************************************/
+  /**
+   * Obtenir les etats epsilon pres.
+   * 
+   * @param startStates Etats a partir des quels on cherche
+   * @return Liste des etats proches a epsilon pres
    */
   private ArrayList<String> getInitalEpsilonStates(ArrayList<String> startStates){
     ArrayList<String> res = new ArrayList<>();
@@ -782,9 +1082,11 @@ class Automata {
     return res;
   }
 
+  /***************************************************************************************/
   /**
    * Testing all 256 ASCII carcacters to find stats that are acceptable
    * 
+   * @param states Etats de l'automate
    * @return Map with ASCI caracter and state number
    */
   private HashMap<String, ArrayList<String>> getASCII_transitions(ArrayList<String> states){
@@ -794,7 +1096,7 @@ class Automata {
       char caractere = (char) i;
       for (Transition e : this.transitions){
         for (String s : states){
-          if (e.getStartState().equals(s)){ // ATTENTION .equals important
+          if (e.getStartState().equals(s)){ 
             if ((""+caractere).equals(e.getTransitionSymbol())) {
               ArrayList<String> etatsASCII = new ArrayList<>();
               etatsASCII.add(e.getEndState());
@@ -809,16 +1111,30 @@ class Automata {
     return res;
   }
 
+  /***************************************************************************************/
+  /**
+   * Trouver pour chaque ensemble d'etats les transitions et les etats d'arrivee. 
+   * Construire une nouvelle liste d'etats avec comme numero les indices du tableau contenant
+   * les listes de hachage avec les transitions.
+   * 
+   * @param states Etats a visiter (etats initiaux au debut)
+   * @param tab Liste avec toutes les transitions du nouveau etat de depart represente par 
+   * le numero de l'indice de ce tableau
+   * @param cpt compteur permettant de ne plus realculer les etats deja trouves 
+   * @return Liste de tables de hachages avec les tranistion depuis l'indice des etats 
+   * et une liste de ces nouveaux etats
+   */
   private  Pair<ArrayList<HashMap<String, ArrayList<String>>>, ArrayList<ArrayList<String>>>  findStates_DFA(ArrayList<ArrayList<String>> states, ArrayList<HashMap<String, ArrayList<String>>> tab, int cpt){
     ArrayList<HashMap<String, ArrayList<String>>> tableau = new ArrayList<>(tab);
     ArrayList<ArrayList<String>> newStates = new ArrayList<>(states);
-
     HashMap<String, ArrayList<String>> res = new HashMap<>();
     
     for (int i=0; i < states.size(); i++){
-      if (i >= cpt){
+      if (i >= cpt){ // pour ne pas recalculer
         res = this.getASCII_transitions(states.get(i));
-        //System.out.println("--> Pour: "+states.get(i)+" res: "+res);
+        if (DEBUG) {
+        	System.out.println("--> Pour: "+states.get(i)+" res: "+res);        	
+        }
         if ((!tableau.contains(res)) && (!newStates.containsAll(res.values()))){
           newStates.addAll(res.values());
         }
@@ -826,8 +1142,10 @@ class Automata {
       }
     }
 
-    //System.out.println("--> New states: "+newStates);
-    //System.out.println("--> Tableau: "+tableau);
+    if (DEBUG) {
+    	System.out.println("--> New states: "+newStates);
+    	System.out.println("--> Tableau: "+tableau);    	
+    }
 
     if (states.size() != newStates.size()){
       System.err.println("\n");
@@ -838,35 +1156,41 @@ class Automata {
     return resultat;
   }
 
+  /***************************************************************************************/
   /**
-   * From NDFA to DFA
+   * Conversion du NDFA en DFA
    * 
-   * @param NDFA
-   * @return
+   * @param NDFA Automate non deterministe
+   * @return Automate deterministe
    */
   public Automata toDFA(Automata NDFA) {
-    //System.out.println("Inital state: "+NDFA.getInitialStates());    
-    //System.out.println("Final states: "+NDFA.getFinalStates());
-    //NDFA.printTransitions();
-    /*----------------------------------------------- */
-    //System.out.println("-----------------------------------------------");
+	if (DEBUG) {
+		System.out.println("\n\n----------- DFA ----------- ");
+		System.out.println("Inital state: "+NDFA.getInitialStates());    
+		System.out.println("Final states: "+NDFA.getFinalStates());
+		NDFA.printTransitions();	
+		System.out.println();
+	}
+
     ArrayList<String> startState = new ArrayList<>(NDFA.getInitialStates());
     startState = NDFA.getInitalEpsilonStates(startState);
     ArrayList<ArrayList<String>> states = new ArrayList<>();
     states.add(startState);
 
-    //System.out.println("===> states: "+states);
-    //System.out.println("==> startState: "+startState);
+    if (DEBUG) {
+    	System.out.println("--> states: "+states);
+    	System.out.println("--> startState: "+startState);    	
+    }
     
-    // HashMap<String, ArrayList<String>> res = NDFA.getASCII_transitions(states.get(0));
-    // System.out.println("===> res: "+res);
-    // // Tableau final de l'automate
+    // Tableau final de l'automate
     ArrayList<HashMap<String, ArrayList<String>>> tableau = new ArrayList<>();
-    // tableau.add(res);
     Pair<ArrayList<HashMap<String, ArrayList<String>>>, ArrayList<ArrayList<String>>> pairTableauStates = NDFA.findStates_DFA(states, tableau, 0);
-    //System.out.println("\nFinal tableau: "+pairTableauStates.getKey());
-    //System.out.println("Final states: "+pairTableauStates.getValue());
-    //System.out.println("-----------------------------------------------");
+    
+    if (DEBUG) {
+    	System.out.println("\nFinal tableau: "+pairTableauStates.getKey());
+    	System.out.println("Final states: "+pairTableauStates.getValue());
+    	System.out.println(); 	
+    }
 
     Automata automataDFA = new Automata(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     automataDFA.addInitialState("0");
@@ -878,30 +1202,34 @@ class Automata {
         automataDFA.addTransition(new Transition(""+i, entry.getKey(), ""+pairTableauStates.getValue().indexOf(entry.getValue())));
         
         // Ajout des etats finaux si on en trouve dans le 'tableau'
-        if (entry.getValue().contains(NDFA.getFinalStates().get(0))) { // AR
+        if (entry.getValue().contains(NDFA.getFinalStates().get(0))) { 
           if (!automataDFA.getFinalStates().contains(""+pairTableauStates.getValue().indexOf(entry.getValue()))){
             automataDFA.addFinalState(""+pairTableauStates.getValue().indexOf(entry.getValue()));
           }
         }
       }
     }
-    /*
-    System.out.print("Final DFA: ");
-    automataDFA.printTransitions();
-    System.out.println("-----------------------------------------------");
-    */
+    
+    if (DEBUG) {
+    	System.out.print("Final DFA: ");
+    	automataDFA.printTransitions();
+    }
+   
     return automataDFA;
   }
 
 
+  /***************************************************************************************/
   /**
    * Decoupe l'ensemble des etats jusqu'a ce que on ne peut plus decouper
    * parcequ'il y en a qu'un seul ou parceque les deux sont dans le 
    * meme ensemble.
    * 
-   * @param ensembleTotal
-   * @param tabTransitions
-   * @return
+   * @param ensembleTotal Ensembles a analyser (finaux et non finaux au debut)
+   * @param tabTransitions	Liste des tables de hachages des transitions par indice de l'etat
+   * @param symboles Lettres de la RegEx
+   * @param i Indice de la la chaine 'symboles' (0 au debut)
+   * @return Ensemble des ensembles differents
    */
   public Set<Set<String>> decoupage(Set<Set<String>> ensembleTotal,  ArrayList<HashMap<String, String>> tabTransitions, String symboles, int i){
       if (i == symboles.length()){
@@ -910,11 +1238,11 @@ class Automata {
 
       String symbole = ""+symboles.charAt(i); 
       Set<Set<String>> ensembleTotalBis = new LinkedHashSet<>(ensembleTotal);
-      
-      // System.out.println();
 
       for (Set<String> ens : ensembleTotal){
-        // System.out.println("==> ens: "+ens+" i: "+i);
+    	if (DEBUG) System.out.println("==> ens: "+ens+" i: "+i);
+    	// Si un ensemble est plus grand que 1 on essaye de voir si on peut 
+    	// le separer en regardant leur transitions 
         if (!(ens.size() == 1)){
           int cpt = 0;
           Set<String> dedans = new LinkedHashSet<>();
@@ -930,36 +1258,50 @@ class Automata {
             cpt++;
           }
 
+          // Pour separer les etats qui n'ont pas de transitions
+          // sortantes de ceux qui ont 
           if (dedans.isEmpty()){
           ens.removeAll(pasDedans);
           dedans = ens;
           }
           ensembleTotalBis.remove(ens);
+          
           if (!dedans.isEmpty()){
             ensembleTotalBis.add(dedans);
           }
           if (!pasDedans.isEmpty()){
             ensembleTotalBis.add(pasDedans);
           }
-          // System.out.println("==> dedans: "+dedans);        
-          // System.out.println("==> pasDedans: "+pasDedans);
+          
+          if (DEBUG) {
+        	  System.out.println("==> dedans: "+dedans);        
+        	  System.out.println("==> pasDedans: "+pasDedans);
+          }
         }
       }
 
-      // System.out.println("==> ensembleTotalBis: "+ensembleTotalBis+" i: "+i+"\n");
+      if (DEBUG) {
+    	  System.out.println("==> ensembleTotalBis: "+ensembleTotalBis+" i: "+i+"\n");
+      }
+      
       return decoupage(ensembleTotalBis, tabTransitions, symboles, (i+1));
     }
 
+  /***************************************************************************************/
   /**
    * Minimisation de l'automate deterministe DFA.
    * 
-   * @param DFA
-   * @return
+   * @param DFA Automate deterministe non minimise
+   * @return Automate deterministe minimise
    */
   public Automata toMinDFA(Automata DFA){
     ArrayList<HashMap<String, String>> tabTransitions = new ArrayList<>();
 
-    // DFA.printTransitions();
+    if (DEBUG) {
+    	System.out.println("\n\n----------- Min-DFA -----------");
+    	 DFA.printTransitions();
+    }
+
     // Recuperation du tableau des transitions
     for (Transition e : DFA.getTransitions()){
       // Si rien n'a ete ajoute encore
@@ -981,15 +1323,17 @@ class Automata {
       }
     }
 
-    // System.out.println("======> tabTransitions: "+tabTransitions);
+    if (DEBUG) {
+    	 System.out.println("--> tabTransitions: "+tabTransitions);    	
+    }
 
-
-
+    // Recuperation etats finaux 
     Set<String> ensembleFinaux = new LinkedHashSet<>();
     for (String finaux : DFA.finalStates){
       ensembleFinaux.add(finaux);
     }
 
+    // Recuperation etats non finaux 
     Set<String> ensembleNonFinaux = new LinkedHashSet<>();
     for (int i=0; i<tabTransitions.size(); i++){
       if (!ensembleFinaux.contains(""+i)){
@@ -997,23 +1341,28 @@ class Automata {
       }
     }
 
-    // System.out.println("--> Set finaux: "+ensembleFinaux);    
-    // System.out.println("--> Set non finaux: "+ensembleNonFinaux);
+    if (DEBUG) {    	
+    	 System.out.println("--> Set finaux: "+ensembleFinaux);    
+    	 System.out.println("--> Set non finaux: "+ensembleNonFinaux);
+    	  System.out.println("--> Symboles: "+DFA.getSymbolesTransition());
+    }
 
-    // System.out.println("--> Symboles: "+DFA.getSymbolesTransition());
+    // Separatio en etats distincts pour minimiser 
     Set<Set<String>> ensembleTotal = new LinkedHashSet<>();
     ensembleTotal.add(ensembleFinaux); ensembleTotal.add(ensembleNonFinaux);
     ensembleTotal = decoupage(ensembleTotal, tabTransitions, DFA.getSymbolesTransition(), 0);
-    // System.out.println("--> ensembleTotal: "+ensembleTotal);
-    // System.out.println("--> Transitions actuelles: "+transitions);
+    if (DEBUG) {    	
+    	 System.out.println("--> ensembleTotal: "+ensembleTotal);
+    	 System.out.println("--> Transitions actuelles: "+transitions);
+    }
 
+    // Creation des nouvelles transitions pour l'automate minimise 
     for (Set<String> ens : ensembleTotal){
        Iterator<String> it = ens.iterator();
         while (it.hasNext()) {
           String indexString = it.next();
           int indexInt = Integer.parseInt(indexString);
           if (!(tabTransitions.size() <= indexInt)){
-          // if (tabTransitions.size() > indexInt){
             for (Map.Entry<String, String> entry : tabTransitions.get(indexInt).entrySet()) {
               Set<String> endSet = getSetFromSets(ensembleTotal, entry.getValue());
               if ((ens.size() == 1) && (endSet.size() == 1)){ 
@@ -1037,7 +1386,10 @@ class Automata {
           }
         }
     }
-    // System.out.println("--> Transitions nouvelles: "+transitions);
+    
+    if (DEBUG) {
+    	System.out.println("--> Transitions nouvelles: "+transitions);    	
+    }
 
     // Recherche set de l'etat initial
     for (Set<String> ens : ensembleTotal){
@@ -1063,16 +1415,23 @@ class Automata {
         }
       }
     }
-    // System.out.println("=====> finalStates: "+finalStates);
+    
+    if (DEBUG) {    	
+    	System.out.println("=====> initialStates: "+initialStates);
+    	System.out.println("=====> finalStates: "+finalStates);
+    	System.out.println("-------------------------------------------\n\n");
+    }
 
     return this;
   }
 
+  /***************************************************************************************/
   /**
+   * Recuperation d'un set parmi un set de sets.
    * 
    * @param setOfSets
-   * @param val
-   * @return
+   * @param val Set recherche
+   * @return Set recherche 
    */
   public Set<String> getSetFromSets(Set<Set<String>> setOfSets, String val){
     for (Set<String> sets : setOfSets){
@@ -1084,8 +1443,9 @@ class Automata {
     return null;
   }
 
+  /***************************************************************************************/
   /**
-   * 
+   * Recherche dans le text du pattern correspondant au RegEx
    * @param path
    * @return
    */
@@ -1115,12 +1475,24 @@ class Automata {
     return cpt;
   }
 
+  /***************************************************************************************/
+  /**
+   * On process recursivement l'automate sur une ligne de text
+   * 
+   * @param state
+   * @param strLine
+   * @param follow
+   * @return
+   */
   protected boolean processAuto(String state, String strLine, boolean follow){
     if(state.contains("[")){
-      for (int i=0; i<state.length(); i++) {
-        if(this.finalStates.contains(""+state.charAt(i))){
-          //System.out.println(state+" "+strLine);
-          return true;
+      //System.out.println(state+" "+strLine);  
+      //System.out.println(this.finalStates+" "+state.charAt(2));
+      for (int i=0; i<state.length(); i++) {    
+        for(String q : this.finalStates){
+          if(q.equals(""+state.charAt(i)) || q.contains(""+state.charAt(i))){
+            return true;
+          }
         }
       }
     } else if(this.finalStates.contains(state)){
@@ -1153,9 +1525,10 @@ class Automata {
     return false;
   }
 
-
+  /***************************************************************************************/
   /**
-   * 
+   * Recuperer les symboles des transitions dans pour faire une String
+   * depuis la DFA, donc plus d'epsilon.
    * 
    * @return
    */
@@ -1170,38 +1543,90 @@ class Automata {
     return res;
   }
 
+  /***************************************************************************************/
+  /**
+   * Recuperer les etats initiaux (initial si DFA/Min-DFA)
+   * 
+   * @return Liste des etats (de l'etat) initiaux
+   */
   public ArrayList<String> getInitialStates(){
     return this.initialStates;
   }
 
+  /***************************************************************************************/
+  /**
+   * Recuperer les etats finaux 
+   * 
+   * @return Liste des etats finaux
+   */
   public ArrayList<String> getFinalStates(){
     return this.finalStates;
   }
 
+  /***************************************************************************************/
+  /**
+   * Recuperer toutes les transitions de l'automate.
+   * 
+   * @return Liste des transitions
+   */
   public ArrayList<Transition> getTransitions(){
     return this.transitions;
   }
 
+  /***************************************************************************************/
+  /**
+   * Ajouter un etat initial dans la liste des etats initiaux de l'automate.
+   * 
+   * @param initial L'etat a ajouter
+   */
   public void addInitialState(String initial){
-    this.initialStates.add(initial); // ArrayList but only one into
+    this.initialStates.add(initial); // ArrayList but only one into for DFA/Min-DFA
   }
 
+  /***************************************************************************************/
+  /**
+   * Ajouter un etat final dans la liste des etats finaux de l'automate.
+   * 
+   * @param finalS L'etat a ajouter
+   */
   public void addFinalState(String finalS){
     this.finalStates.add(finalS);
   }
 
+  /***************************************************************************************/
+  /**
+   * Ajouter une liste d'etat finaux dans la liste de l'automate.
+   * 
+   * @param listFinalS La liste a ajouter
+   */
   public void addFinalStates(ArrayList<String> listFinalS){
     this.finalStates.addAll(listFinalS);
   }
 
+  /***************************************************************************************/
+  /**
+   * Ajouter une transition a la liste de transitions de l'automate.
+   * 
+   * @param e Tranition a ajouter
+   */
   public void addTransition(Transition e){
     this.transitions.add(e);
   }
 
+  /***************************************************************************************/
+  /**
+   * Ajouter une liste de transitions a la liste de transitions de l'automate.
+   * 
+   * @param listE Liste a ajouter
+   */
   public void addTransitions(ArrayList<Transition> listE) {
     this.transitions.addAll(listE);
   }
 
+  /***************************************************************************************/
+  /**
+   * Affichage de toutes les transitions de l'automate.
+   */
   public void printTransitions(){
     System.out.println("Transitions: ");
     for (Transition e : this.transitions){
@@ -1209,3 +1634,6 @@ class Automata {
     }
   }
 }
+/***************************************************************************************/
+/***************************************************************************************/
+/***************************************************************************************/
