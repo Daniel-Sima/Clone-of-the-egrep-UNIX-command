@@ -38,7 +38,8 @@ public class RegEx {
   private static long endDFA,endDOT,endMDFA,endNFDA,endWT;
 
   //MAIN
-  public static void main(String arg[]) {
+  public static void main(String arg[]) throws IOException {
+    FileWriter writer;
     System.out.println("Welcome to M2 STL.");
     System.out.println("RegEx: "+arg[0]);
 
@@ -50,9 +51,10 @@ public class RegEx {
     } else if (arg.length==1) {
       regEx = arg[0];
     } else {
-      Scanner scanner = new Scanner(System.in);
-      System.out.print("  >> Please enter a regEx: ");
-      regEx = scanner.next();
+      try (Scanner scanner = new Scanner(System.in)) {
+        System.out.print("  >> Please enter a regEx: ");
+        regEx = scanner.next();
+      }
     }
     System.out.println("  >> Parsing regEx \""+regEx+"\".");
     System.out.println("  >> ...");
@@ -63,12 +65,12 @@ public class RegEx {
       System.out.print("  >> ASCII codes: ["+(int)regEx.charAt(0));
       for (int i=1;i<regEx.length();i++) System.out.print(","+(int)regEx.charAt(i));
       System.out.println("].");
-      // TODO voir pq psq si pas ces caracteres ca marche pas
+      
       try {
         boolean hasit = false;
         for (int i=1;i<regEx.length();i++){
           char c = regEx.charAt(i);
-          if(c=='|' || c=='+' || c=='(' || c==')' || c=='*' || c=='.'){
+          if(c=='|' || c=='+' || c=='(' || c==')' || c=='*'){
             hasit=true;
             break;
           }
@@ -83,7 +85,7 @@ public class RegEx {
           resSyntaxTree = resSyntaxTree.toSyntaxTree(ret);
           
           startWT = System.currentTimeMillis();
-          FileWriter writer = new FileWriter("arbre_syntaxique.dot");
+          writer = new FileWriter("arbre_syntaxique.dot");
           writer.write("digraph {\n");
           for (Automata.Transition t : resSyntaxTree.transitions){
             writer.write("\t" + t.getStartState() + "->" + t.getEndState() + "\n");
@@ -224,7 +226,11 @@ public class RegEx {
     long endAll = System.currentTimeMillis(); 
     
     long totalTime = endAll-startAll;
+    writer = new FileWriter("sample.txt", true);
     System.out.println("Execution time : "+totalTime+"ms"); 
+
+    writer.write(regEx+" "+totalTime+"\n");
+    writer.close();
   }
 
   //FROM REGEX TO SYNTAX TREE
@@ -286,17 +292,14 @@ public class RegEx {
     if (!found) throw new Exception();
     return result;
   }
-
   private static boolean containEtoile(ArrayList<RegExTree> trees) {
     for (RegExTree t: trees) if (t.root==ETOILE && t.subTrees.isEmpty()) return true;
     return false;
   }
-
   private static boolean containPlus(ArrayList<RegExTree> trees) {
     for (RegExTree t: trees) if (t.root==PLUS && t.subTrees.isEmpty()) return true;
     return false;
   }
-
   private static ArrayList<RegExTree> processEtoile(ArrayList<RegExTree> trees) throws Exception {
     ArrayList<RegExTree> result = new ArrayList<RegExTree>();
     boolean found = false;
@@ -314,7 +317,6 @@ public class RegEx {
     }
     return result;
   }
-
   private static ArrayList<RegExTree> processPlus(ArrayList<RegExTree> trees) throws Exception {
     ArrayList<RegExTree> result = new ArrayList<RegExTree>();
     boolean found = false;
@@ -408,7 +410,6 @@ public class RegEx {
     return new RegExTree(tree.root, subTrees);
   }
   
-  //read file
   public static int processKMP(String path, String pattern){
     File directory = new File(path);
     String strLine = "";
@@ -528,6 +529,9 @@ class RegExTree {
   }
 }
 
+/**
+  * Classe Automate
+  */
 class Automata {
   class Transition {
     private String startState;
