@@ -47,7 +47,7 @@ public class RegEx {
 	}
 
 	// TIME
-	private static long startDFA, startDOT, startMDFA, startNFDA, startWT;
+	private static long startDFA, startDOT, startMDFA, startNFDA, startWT, moyAuto, moyKMP;
 	private static long endDFA, endDOT, endMDFA, endNFDA, endWT, endAll, totalDOT;
 
 	// MAIN
@@ -238,16 +238,46 @@ public class RegEx {
 					endDOT = System.currentTimeMillis();
 					totalDOT += (endDOT - startDOT);
 
-					/* Partie de recherche dans le texte TODO */
+					/* Partie de recherche dans le texte */
 					if (arg.length == 2) {
-						int cptOcc = resMDFA.search(text);
-						System.out.println("\n  >> We found " + cptOcc + " occurences of pattern with Automates method.");
+						long startSearchText, endSearchText;
+						int i = 0, maxI = 10;
+						boolean print = false;
+						while (i < maxI) {
+							startSearchText = System.currentTimeMillis();
+							int cptOcc = resMDFA.search(text, print);
+							endSearchText = System.currentTimeMillis();
+							if (print) {
+								System.out.println("\n  >> We found " + cptOcc + " occurences of pattern with Automates method.");
+							} else {
+								System.out.println("i: "+i);
+								System.out.println("moyAuto: "+moyAuto);
+							}
+							moyAuto += (endSearchText - startSearchText);
+							i++;
+						}
+						moyAuto /= i;
 					}
 
 				} else {
 					/* Partie KMP TODO */
-					int cpt = processKMP(text, regEx);
-					System.out.println("\n  >> We found " + cpt + " occurences of pattern with KMP method.");
+					int i = 0, maxI = 10;
+					boolean print = false;
+					long startKMP, endKMP;
+					while (i < maxI) {
+						startKMP = System.currentTimeMillis();
+						int cpt = processKMP(text, regEx, print);
+						endKMP= System.currentTimeMillis();
+						if (print) {
+							System.out.println("\n  >> We found " + cpt + " occurences of pattern with KMP method.");
+						} else {
+							System.out.println("i: "+i);
+							System.out.println("moyKMP: "+moyKMP);
+						}
+						i++;
+						moyKMP += endKMP-startKMP; 
+					}
+					moyKMP /= i;
 				}
 			} catch (Exception e) {
 				System.err.println("  >> ERROR: syntax error for regEx \"" + regEx + "\". | Exception: "+e);
@@ -267,6 +297,8 @@ public class RegEx {
 		System.out.println("--> Total time DFA = " + (endDFA - startDFA) + "ms");
 		System.out.println("--> Total time Min-DFA = " + (endMDFA - startMDFA) + "ms");
 		System.out.println("--> Total time DOT prints = " + totalDOT + "ms");
+		System.out.println("--> Total time text search with automats = " + moyAuto + "ms");
+		System.out.println("--> Total time KMP  = " + moyKMP + "ms");
 		System.out.println("--> All total times = " + (endAll - startAll) + "ms");
 	}
 
@@ -601,11 +633,13 @@ public class RegEx {
 	 * @param pattern RegEx
 	 * @return TODO
 	 */
-	public static int processKMP(String path, String pattern) {
+	public static int processKMP(String path, String pattern, boolean print) {
 		File directory = new File(path);
 		String strLine = "";
 		int cpt = 0;
-		System.out.println("  >> Reading: " + directory.getAbsolutePath()+"\n");
+		if (print) {
+			System.out.println("  >> Reading: " + directory.getAbsolutePath()+"\n");
+		}
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(path));
 			while ((strLine = br.readLine()) != null) {
@@ -613,7 +647,9 @@ public class RegEx {
 				int index = search(strLine, pattern, lps);
 				if (index != -1) {
 					cpt++;
-					System.out.println("  >> Found: " + strLine);
+					if (print) {
+						System.out.println("  >> Found: " + strLine);
+					}
 				}
 			}
 			br.close();
@@ -1547,11 +1583,13 @@ class Automata {
 	 * @param path
 	 * @return
 	 */
-	public int search(String path) {
+	public int search(String path, boolean print) {
 		File directory = new File(path);
 		String strLine = "";
 		int cpt = 0;
-		System.out.println("  >> Reading: " + directory.getAbsolutePath()+"\n");
+		if (print) {
+			System.out.println("  >> Reading: " + directory.getAbsolutePath()+"\n");
+		}
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(directory.getAbsolutePath()));
 
@@ -1559,7 +1597,9 @@ class Automata {
 				for (String init : this.initialStates) {
 					if (processAuto(init, strLine, false)) {
 						cpt++;
-						System.out.println("  >> Found: "+strLine);
+						if (print) {
+							System.out.println("  >> Found: "+strLine);
+						}
 					}
 				}
 			}
