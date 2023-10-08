@@ -5,7 +5,7 @@ javac src/RegEx.java
 ```
 ## Pour lancer le programme
 ```
-javac src/RegEx [pattern] [text]
+java src/RegEx [pattern] [text]
 ```
 Le programme peut être lancé sans spécifier de [text] et dans ce cas il générera l'arbre syntaxique et les automates caractéristiques du pattern
 
