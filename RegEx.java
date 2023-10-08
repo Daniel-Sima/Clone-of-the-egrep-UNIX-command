@@ -235,13 +235,13 @@ public class RegEx {
           /* Partie de recherche dans le texte TODO */ 
           if(arg.length==2){
         	  int cptOcc = resMDFA.search(text);
-        	  System.out.println("We found "+cptOcc+" occurences of pattern.");
+        	  System.out.println("We found "+cptOcc+" occurences of pattern with Automates method.");
           }
 
         } else {
         	/* Partie KMP TODO*/
         	int cpt = processKMP(text, regEx);
-        	System.out.println("We found "+cpt+" occurences of pattern.");
+        	System.out.println("We found "+cpt+" occurences of pattern with KMP method.");
         } 
       } catch (Exception e) {
         System.err.println("  >> ERROR: syntax error for regEx \""+regEx+"\"." );
