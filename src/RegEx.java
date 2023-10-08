@@ -1,3 +1,5 @@
+package src;
+
 import java.util.Scanner;
 
 import javax.print.DocFlavor.STRING;
@@ -107,7 +109,7 @@ public class RegEx {
 					endWT = System.currentTimeMillis();
 
 					startWT = System.currentTimeMillis();
-					writer = new FileWriter("arbre_syntaxique.dot");
+					writer = new FileWriter("./graphes/arbre_syntaxique.dot");
 					writer.write("digraph {\n");
 					for (Automata.Transition t : resSyntaxTree.transitions) {
 						writer.write("\t" + t.getStartState() + "->" + t.getEndState() + "\n");
@@ -118,7 +120,7 @@ public class RegEx {
 
 					Process process;
 					try {
-						process = Runtime.getRuntime().exec("dot -Tpng arbre_syntaxique.dot -o arbre_syntaxique.png");
+						process = Runtime.getRuntime().exec("dot -Tpng ./graphes/arbre_syntaxique.dot -o ./graphes/arbre_syntaxique.png");
 						process.waitFor();
 					} catch (IOException | InterruptedException e) {
 						e.printStackTrace();
@@ -134,7 +136,7 @@ public class RegEx {
 
 					// Affichage du NDFA dans un fichier '.dot'
 					startDOT = System.currentTimeMillis();
-					writer = new FileWriter("NDFA.dot");
+					writer = new FileWriter("./graphes/NDFA.dot");
 					writer.write("digraph {\n\trankdir=LR;\n\n");
 					for (String s : res.finalStates) {
 						writer.write("\t" + s + " [shape=doublecircle]\n");
@@ -154,7 +156,7 @@ public class RegEx {
 					writer.close();
 
 					try {
-						process = Runtime.getRuntime().exec("dot -Tpng NDFA.dot -o NDFA.png");
+						process = Runtime.getRuntime().exec("dot -Tpng ./graphes/NDFA.dot -o ./graphes/NDFA.png");
 						process.waitFor();
 					} catch (IOException | InterruptedException e) {
 						e.printStackTrace();
@@ -170,7 +172,7 @@ public class RegEx {
 
 					// Affichage du DFA dans un fichier '.dot'
 					startDOT = System.currentTimeMillis();
-					writer = new FileWriter("DFA.dot");
+					writer = new FileWriter("./graphes/DFA.dot");
 					writer.write("digraph {\n\trankdir=LR;\n\n");
 					for (String s : resDFA.getFinalStates()) {
 						writer.write("\t" + s + " [shape=doublecircle]\n");
@@ -190,7 +192,7 @@ public class RegEx {
 					writer.close();
 
 					try {
-						process = Runtime.getRuntime().exec("dot -Tpng DFA.dot -o DFA.png");
+						process = Runtime.getRuntime().exec("dot -Tpng ./graphes/DFA.dot -o ./graphes/DFA.png");
 						process.waitFor();
 					} catch (IOException | InterruptedException e) {
 						e.printStackTrace();
@@ -206,7 +208,7 @@ public class RegEx {
 
 					// Affichage du Min-DFA dans un fichier '.dot'
 					startDOT = System.currentTimeMillis();
-					writer = new FileWriter("Min-DFA.dot");
+					writer = new FileWriter("./graphes/Min-DFA.dot");
 					writer.write("digraph {\n\trankdir=LR;\n\n");
 					for (String s : resMDFA.getFinalStates()) {
 						writer.write("\t\"" + s + "\" [shape=doublecircle]\n");
@@ -230,7 +232,7 @@ public class RegEx {
 					writer.close();
 
 					try {
-						process = Runtime.getRuntime().exec("dot -Tpng Min-DFA.dot -o Min-DFA.png");
+						process = Runtime.getRuntime().exec("dot -Tpng ./graphes/Min-DFA.dot -o ./graphes/Min-DFA.png");
 						process.waitFor();
 					} catch (IOException | InterruptedException e) {
 						e.printStackTrace();
