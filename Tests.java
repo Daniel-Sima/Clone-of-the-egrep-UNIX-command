@@ -2,7 +2,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 
-class Automates {
+class Tests {
 
 	@org.junit.jupiter.api.Test
 	void test_regex_1() {

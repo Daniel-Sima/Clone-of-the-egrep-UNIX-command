@@ -47,7 +47,7 @@ public class RegEx {
 	}
 
 	// TIME
-	private static long startDFA, startDOT, startMDFA, startNFDA, startWT, moyAuto, moyKMP;
+	private static long startDFA, startDOT, startMDFA, startNFDA, startWT, startSearch, endSearch;
 	private static long endDFA, endDOT, endMDFA, endNFDA, endWT, endAll, totalDOT;
 
 	// MAIN
@@ -87,10 +87,10 @@ public class RegEx {
 						hasit = true;
 						break;
 					}
-					
-				if (arg.length == 1) {
-					hasit = true;
-				}
+
+					if (arg.length == 1) {
+						hasit = true;
+					}
 				}
 
 				if (hasit) {
@@ -105,7 +105,7 @@ public class RegEx {
 					startWT = System.currentTimeMillis();
 					resSyntaxTree = resSyntaxTree.toSyntaxTree(ret);
 					endWT = System.currentTimeMillis();
-					
+
 					startWT = System.currentTimeMillis();
 					writer = new FileWriter("arbre_syntaxique.dot");
 					writer.write("digraph {\n");
@@ -240,47 +240,20 @@ public class RegEx {
 
 					/* Partie de recherche dans le texte */
 					if (arg.length == 2) {
-						long startSearchText, endSearchText;
-						int i = 0, maxI = 10;
-						boolean print = false;
-						while (i < maxI) {
-							startSearchText = System.currentTimeMillis();
-							int cptOcc = resMDFA.search(text, print);
-							endSearchText = System.currentTimeMillis();
-							if (print) {
-								System.out.println("\n  >> We found " + cptOcc + " occurences of pattern with Automates method.");
-							} else {
-								System.out.println("i: "+i);
-								System.out.println("moyAuto: "+moyAuto);
-							}
-							moyAuto += (endSearchText - startSearchText);
-							i++;
-						}
-						moyAuto /= i;
+						startSearch = System.currentTimeMillis();
+						int cptOcc = resMDFA.search(text, true);
+						endSearch = System.currentTimeMillis();
+						System.out
+								.println("\n  >> We found " + cptOcc + " occurences of pattern with Automates method.");
 					}
 
 				} else {
-					/* Partie KMP TODO */
-					int i = 0, maxI = 10;
-					boolean print = false;
-					long startKMP, endKMP;
-					while (i < maxI) {
-						startKMP = System.currentTimeMillis();
-						int cpt = processKMP(text, regEx, print);
-						endKMP= System.currentTimeMillis();
-						if (print) {
-							System.out.println("\n  >> We found " + cpt + " occurences of pattern with KMP method.");
-						} else {
-							System.out.println("i: "+i);
-							System.out.println("moyKMP: "+moyKMP);
-						}
-						i++;
-						moyKMP += endKMP-startKMP; 
-					}
-					moyKMP /= i;
+					/* Partie KMP */
+					int cpt = processKMP(text, regEx, true);
+					System.out.println("\n  >> We found " + cpt + " occurences of pattern with KMP method.");
 				}
 			} catch (Exception e) {
-				System.err.println("  >> ERROR: syntax error for regEx \"" + regEx + "\". | Exception: "+e);
+				System.err.println("  >> ERROR: syntax error for regEx \"" + regEx + "\". | Exception: " + e);
 			}
 		}
 
@@ -293,12 +266,11 @@ public class RegEx {
 		/* Affichages temps d'execution */
 		System.out.println("Execution times for RegEx '" + regEx + "': ");
 		System.out.println("--> Total time Arbre syntaxique = " + (endWT - startWT) + "ms");
-		System.out.println("--> Total time NDGA = " + (endNFDA - startNFDA) + "ms");
+		System.out.println("--> Total time NDFA = " + (endNFDA - startNFDA) + "ms");
 		System.out.println("--> Total time DFA = " + (endDFA - startDFA) + "ms");
 		System.out.println("--> Total time Min-DFA = " + (endMDFA - startMDFA) + "ms");
 		System.out.println("--> Total time DOT prints = " + totalDOT + "ms");
-		System.out.println("--> Total time text search with automats = " + moyAuto + "ms");
-		System.out.println("--> Total time KMP  = " + moyKMP + "ms");
+		System.out.println("--> Total time text search = " + (endSearch-startSearch) + "ms");
 		System.out.println("--> All total times = " + (endAll - startAll) + "ms");
 	}
 
@@ -432,7 +404,7 @@ public class RegEx {
 				return true;
 		return false;
 	}
-	
+
 	/***************************************************************************************/
 	/**
 	 * 
@@ -638,7 +610,7 @@ public class RegEx {
 		String strLine = "";
 		int cpt = 0;
 		if (print) {
-			System.out.println("  >> Reading: " + directory.getAbsolutePath()+"\n");
+			System.out.println("  >> Reading: " + directory.getAbsolutePath() + "\n");
 		}
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(path));
@@ -1265,7 +1237,7 @@ class Automata {
 		}
 
 		if (states.size() != newStates.size()) {
-			if(DEBUG) {
+			if (DEBUG) {
 				System.err.println("\n");
 			}
 			return this.findStates_DFA(newStates, tableau, states.size());
@@ -1588,7 +1560,7 @@ class Automata {
 		String strLine = "";
 		int cpt = 0;
 		if (print) {
-			System.out.println("  >> Reading: " + directory.getAbsolutePath()+"\n");
+			System.out.println("  >> Reading: " + directory.getAbsolutePath() + "\n");
 		}
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(directory.getAbsolutePath()));
@@ -1598,7 +1570,7 @@ class Automata {
 					if (processAuto(init, strLine, false)) {
 						cpt++;
 						if (print) {
-							System.out.println("  >> Found: "+strLine);
+							System.out.println("  >> Found: " + strLine);
 						}
 					}
 				}
@@ -1633,7 +1605,6 @@ class Automata {
 		} else if (this.finalStates.contains(state)) {
 			return true;
 		}
-		
 
 		ArrayList<Transition> currTransitions = new ArrayList<>();
 
@@ -1645,13 +1616,13 @@ class Automata {
 		if (strLine.isEmpty()) {
 			return false;
 		}
-		
+
 		for (Transition t : currTransitions) {
 			if (follow) {
 				if (t.transitionSymbol.equals("" + strLine.charAt(0))) {
 					return processAuto(t.endState, strLine.substring(1, strLine.length()), true);
-					
-				} 
+
+				}
 			} else {
 				for (int i = 0; i < strLine.length(); i++) {
 					if (t.transitionSymbol.equals("" + strLine.charAt(i))) {
@@ -1661,10 +1632,9 @@ class Automata {
 			}
 		}
 
-		
 		if (!strLine.isEmpty()) {
 			return processAuto(this.getInitialStates().get(0), strLine.substring(1, strLine.length()), false);
-		} 
+		}
 
 		return false;
 	}
