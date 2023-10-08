@@ -6,12 +6,12 @@ digraph {
 
 	0->1 [label= "S"];
 	2->3 [label= "a"];
-	4->5 [label= "g"];
+	4->5 [label= "r"];
 	6->2 [label= "ε"];
 	6->4 [label= "ε"];
 	3->7 [label= "ε"];
 	5->7 [label= "ε"];
-	8->9 [label= "r"];
+	8->9 [label= "g"];
 	10->6 [label= "ε"];
 	10->8 [label= "ε"];
 	7->11 [label= "ε"];
@@ -20,9 +20,9 @@ digraph {
 	1010->88 [label= "ε"];
 	66->22 [label= "ε"];
 	66->44 [label= "ε"];
-	88->99 [label= "r"];
+	88->99 [label= "g"];
 	22->33 [label= "a"];
-	44->55 [label= "g"];
+	44->55 [label= "r"];
 	99->1111 [label= "ε"];
 	33->77 [label= "ε"];
 	55->77 [label= "ε"];
